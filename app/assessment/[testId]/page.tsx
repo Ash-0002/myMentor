@@ -12,6 +12,7 @@ import axios from "axios"
 interface Option {
   id: number
   option: string
+  option_no: number
   weightage: number
 }
 
@@ -41,6 +42,35 @@ export default function AssessmentPage() {
       const parsed = parseInt(rawId, 10)
       if (!isNaN(parsed) && parsed > 0) {
         console.log("[v0] Parsed valid testId:", parsed)
+        
+        // Access Control Check
+        try {
+          const paidTestsStr = localStorage.getItem("paidTests")
+          if (paidTestsStr) {
+            const paidTests = JSON.parse(paidTestsStr)
+            const isAllowed = paidTests.some((t: any) => t.id === parsed)
+            
+            if (!isAllowed) {
+              console.warn("[v0] Access denied: Test ID not found in paid tests")
+              setError("Access Denied: You have not purchased this test.")
+              setIsLoading(false)
+              return 
+            }
+          } else {
+             console.warn("[v0] No paid tests found in storage")
+             // In dev mode or if explicitly testing, might want to bypass, but for security:
+             setError("Access Denied: No active assessments found.")
+             setIsLoading(false)
+             return
+          }
+        } catch (authErr) {
+          console.error("[v0] Error checking access permissions:", authErr)
+          // Fail safe
+          setError("Error verifying access permissions.")
+          setIsLoading(false)
+          return
+        }
+
         setTestId(parsed)
       } else {
         console.error("[v0] Invalid testId parsed:", parsed)
@@ -52,7 +82,7 @@ export default function AssessmentPage() {
 
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-  const [answers, setAnswers] = useState<Record<number, number>>({})
+  const [answers, setAnswers] = useState<Record<number, number>>({}) // Stores option_no now
   const [selectedTests, setSelectedTests] = useState<number[]>([]) // Track selected tests    
 
   const [timeLeft, setTimeLeft] = useState(1800) // 30 minutes
@@ -170,15 +200,26 @@ export default function AssessmentPage() {
 
   const currentQuestion = questions[currentQuestionIndex]
   const testProgress = ((currentQuestionIndex + 1) / questions.length) * 100
-  const selectedAnswer = answers[currentQuestion.id]
+  const selectedAnswer = answers[currentQuestion.id] // This is now option_no
 
-  const handleSelectAnswer = (optionId: number) => {
+  const handleSelectAnswer = (option_no: number) => {
     setAnswers((prev) => ({
       ...prev,
-      [currentQuestion.id]: optionId,
+      [currentQuestion.id]: option_no,
     }))
-    setSelectedTests((prev) => [...prev, currentQuestion.id])
-    setCurrentQuestionIndex((prev) => prev + 1)
+    // Only add to selectedTests if not already there to avoid duplicates? 
+    // User logic was append: setSelectedTests((prev) => [...prev, currentQuestion.id])
+    if (!selectedTests.includes(currentQuestion.id)) {
+        setSelectedTests((prev) => [...prev, currentQuestion.id])
+    }
+    
+    // Auto advance after short delay or immediately? User had immediate next.
+    // setCurrentQuestionIndex((prev) => prev + 1) // User logic
+    
+    // Let's keep user logic but maybe check bounds
+    if (currentQuestionIndex < questions.length - 1) {
+         setCurrentQuestionIndex((prev) => prev + 1)
+    }
 
     console.log("Selected Tests:", selectedTests)
     console.log("Answers:", answers)
@@ -258,9 +299,9 @@ export default function AssessmentPage() {
             {currentQuestion.options.map((option) => (
               <button
                 key={option.id}
-                onClick={() => handleSelectAnswer(option.id)}
+                onClick={() => handleSelectAnswer(option.option_no)}
                 className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
-                  selectedAnswer === option.id
+                  selectedAnswer === option.option_no
                     ? "border-primary bg-primary/5"
                     : "border-input bg-background hover:border-primary/50 hover:bg-muted/30"
                 }`}
@@ -268,16 +309,15 @@ export default function AssessmentPage() {
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                      selectedAnswer === option.id ? "border-primary bg-primary" : "border-input"
+                      selectedAnswer === option.option_no ? "border-primary bg-primary" : "border-input"
                     }`}
                   >
-                    {selectedAnswer === option.id && (
+                    {selectedAnswer === option.option_no && (
                       <span className="text-primary-foreground text-sm font-bold">✓</span>
                     )}
                   </div>
                   <div className="flex-1">
                     <p className="text-sm md:text-base text-foreground font-medium">{option.option}</p>
-                    {/* <p className="text-xs text-muted-foreground mt-1">Weightage: {option.weightage}</p> */}
                   </div>
                 </div>
               </button>
