@@ -5,29 +5,77 @@ import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Clock, AlertCircle, ArrowRight } from "lucide-react"
+import { CheckCircle, Clock, AlertCircle, ArrowRight, Loader2 } from "lucide-react"
+import axios from "axios"
 
-interface PaidTest {
+interface Test {
   id: number
-  name: string
-  price: number
-  paymentDate: string
-  duration: number
-  totalQuestions: number
+  evaluation_code: string
+  evaluation_name: string
+  evaluation_fullname: string
+  evaluation_cost: number
+  evaluation_time: number
+}
+
+interface PaidTest extends Test {
   status: "pending" | "in_progress" | "completed"
   progressPercentage: number
+  totalQuestions: number
+  paymentDate: string
+}
+
+interface QuestionResponse {
+  status: string
+  data: Array<{
+    id: number
+    question: string
+    options: Array<{
+      id: number
+      option_text: string
+      weightage: number
+    }>
+  }>
+}
+
+const fetchTestQuestionCount = async (testId: number): Promise<number> => {
+  try {
+    const response = await axios.get<QuestionResponse>(
+      `http://31.97.63.174:9010/api/question-options/${testId}?page=1`,
+      { timeout: 10000 },
+    )
+
+    if (response.data?.status === "success" && response.data?.data) {
+      return response.data.data.length
+    }
+    return 0
+  } catch (error) {
+    console.log("[v0] Error fetching question count for test ${testId}:", error)
+    return 0
+  }
 }
 
 const getPaidTests = async (): Promise<PaidTest[]> => {
-  // TODO: Replace with API call
-  // return fetch('/api/tests/paid').then(res => res.json())
-
   const storedTests = localStorage.getItem("paidTests")
   const paymentStatus = localStorage.getItem("paymentStatus")
 
   if (paymentStatus === "completed" && storedTests) {
     try {
-      return JSON.parse(storedTests)
+      const tests: Test[] = JSON.parse(storedTests)
+
+      const testsWithQuestionCounts = await Promise.all(
+        tests.map(async (test) => {
+          const questionCount = await fetchTestQuestionCount(test.id)
+          return {
+            ...test,
+            status: "pending" as const,
+            progressPercentage: 0,
+            totalQuestions: questionCount,
+            paymentDate: new Date().toISOString(),
+          }
+        }),
+      )
+
+      return testsWithQuestionCounts
     } catch (error) {
       console.log("[v0] Error loading paid tests", error)
       return []
@@ -57,8 +105,7 @@ export default function AssignedTestsView({ onStartAssessment }: AssignedTestsVi
 
   const startAssessment = (testId: number) => {
     localStorage.setItem("currentTestId", String(testId))
-    localStorage.setItem("assessmentTestIds", JSON.stringify([testId]))
-    router.push("/assessment")
+    router.push(`/assessment/${testId}`)
   }
 
   const getStatusColor = (status: PaidTest["status"]) => {
@@ -86,9 +133,9 @@ export default function AssignedTestsView({ onStartAssessment }: AssignedTestsVi
   if (isLoading) {
     return (
       <Card className="p-8 border border-border">
-        <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-muted rounded w-32"></div>
-          <div className="h-4 bg-muted rounded w-24"></div>
+        <div className="flex items-center justify-center gap-3">
+          <Loader2 className="w-5 h-5 text-primary animate-spin" />
+          <p className="text-foreground font-medium">Loading assessments...</p>
         </div>
       </Card>
     )
@@ -122,7 +169,7 @@ export default function AssignedTestsView({ onStartAssessment }: AssignedTestsVi
             >
               <div className="mb-4">
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-foreground leading-tight pr-2">{test.name}</h3>
+                  <h3 className="text-lg font-semibold text-foreground leading-tight pr-2">{test.evaluation_name}</h3>
                   <Badge className={`${getStatusColor(test.status)} border-0 ml-2 flex-shrink-0 gap-1`}>
                     {getStatusIcon(test.status)}
                     <span className="capitalize text-xs">{test.status}</span>
@@ -137,11 +184,11 @@ export default function AssignedTestsView({ onStartAssessment }: AssignedTestsVi
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Duration</span>
-                  <span className="font-semibold text-foreground">{test.duration} minutes</span>
+                  <span className="font-semibold text-foreground">{test.evaluation_time} minutes</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Amount Paid</span>
-                  <span className="font-semibold text-foreground">₹{test.price.toLocaleString()}</span>
+                  <span className="font-semibold text-foreground">₹{test.evaluation_cost.toLocaleString()}</span>
                 </div>
               </div>
 

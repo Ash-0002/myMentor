@@ -1,18 +1,19 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { LogOut, Home, Users, Calendar, Menu, X, ClipboardList, Award } from "lucide-react"
+import { LogOut, Home, Users, Calendar, Menu, X, ClipboardList, Award, Pill } from "lucide-react"
+import { useRouter } from "next/navigation"
 import PatientInfo from "./patient-info"
 import TestSelection from "./test-selection"
-import BillingPanel from "./billing-panel"
 import ThemeSelector from "./theme-selector"
 import AssignedTestsView from "./assigned-tests-view"
 import TestResultsView from "./test-results-view"
 import { Card } from "@/components/ui/card"
 
 export default function HospitalDashboard() {
+  const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [selectedTests, setSelectedTests] = useState<number[]>([])
+  const [selectedTests, setSelectedTests] = useState<any[]>([])
   const [activeNav, setActiveNav] = useState("dashboard")
   const [isMobile, setIsMobile] = useState(false)
 
@@ -29,6 +30,10 @@ export default function HospitalDashboard() {
     setActiveNav(nav)
     if (isMobile) setSidebarOpen(false)
   }
+
+  // const navigateToTestSelection = () => {
+  //   router.push("/test-selection")
+  // }
 
   const closeSidebar = () => setSidebarOpen(false)
 
@@ -57,6 +62,7 @@ export default function HospitalDashboard() {
           <nav className="flex-1 px-3 py-6 space-y-2">
             {[
               { icon: Home, label: "Dashboard", id: "dashboard" },
+              // { icon: Pill, label: "Select Tests", id: "test-selection", onClick: navigateToTestSelection },
               { icon: Users, label: "Patients", id: "patients" },
               { icon: Calendar, label: "Appointments", id: "appointments" },
               { icon: ClipboardList, label: "My Assessments", id: "assessments" },
@@ -64,7 +70,11 @@ export default function HospitalDashboard() {
             ].map((item) => (
               <button
                 key={item.id}
-                onClick={() => handleNavigation(item.id)}
+                onClick={() => {
+                 {
+                    handleNavigation(item.id)
+                  }
+                }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   activeNav === item.id
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
@@ -126,17 +136,9 @@ export default function HospitalDashboard() {
         {/* Content Area */}
         <div className="flex-1 overflow-auto p-4 md:p-8">
           {activeNav === "dashboard" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-              {/* Left Column - Patient Info */}
-              <div className="lg:col-span-2 space-y-6">
-                <PatientInfo />
-                <TestSelection onTestsChange={setSelectedTests} />
-              </div>
-
-              {/* Right Column - Billing (only on dashboard) */}
-              <div className="lg:col-span-1">
-                <BillingPanel selectedTests={selectedTests} />
-              </div>
+            <div className="space-y-6">
+              <PatientInfo />
+              <TestSelection onTestsChange={setSelectedTests} />
             </div>
           )}
 

@@ -6,26 +6,20 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Check, Loader2, AlertCircle } from "lucide-react"
 
-const allTests = [
-  { id: 1, name: "MDPS", price: 1600 },
-  { id: 2, name: "ISSA", price: 2600 },
-  { id: 3, name: "SCARED", price: 2800 },
-  { id: 4, name: "BASC-3", price: 2200 },
-  { id: 5, name: "CONNERS", price: 1900 },
-  { id: 6, name: "WISC-V", price: 3200 },
-  { id: 7, name: "ADOS-2", price: 3500 },
-  { id: 8, name: "CAPD", price: 2400 },
-  { id: 9, name: "DVT", price: 1800 },
-  { id: 10, name: "TOVA", price: 2100 },
-  { id: 11, name: "CPT-3", price: 2500 },
-  { id: 12, name: "NEPSY-II", price: 3800 },
-]
+interface Test {
+  id: number
+  evaluation_code: string
+  evaluation_name: string
+  evaluation_fullname: string
+  evaluation_cost: number
+  evaluation_time: number
+}
 
-const processPayment = async (testIds: number[], amount: number): Promise<boolean> => {
+const processPayment = async (tests: Test[], amount: number): Promise<boolean> => {
   // TODO: Replace with actual payment API call
   // const response = await fetch('/api/payments/process', {
   //   method: 'POST',
-  //   body: JSON.stringify({ testIds, amount })
+  //   body: JSON.stringify({ testIds: tests.map(t => t.id), amount })
   // })
   // return response.ok
 
@@ -37,7 +31,7 @@ const processPayment = async (testIds: number[], amount: number): Promise<boolea
 
 export default function PaymentPage() {
   const router = useRouter()
-  const [selectedTests, setSelectedTests] = useState<number[]>([])
+  const [selectedTests, setSelectedTests] = useState<Test[]>([])
   const [paymentAmount, setPaymentAmount] = useState(0)
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentStatus, setPaymentStatus] = useState<"pending" | "success" | "failed">("pending")
@@ -50,7 +44,7 @@ export default function PaymentPage() {
     if (storedTests && storedAmount) {
       try {
         const tests = JSON.parse(storedTests)
-        const amount = Number.parseInt(storedAmount)
+        const amount = Number.parseFloat(storedAmount)
         setSelectedTests(tests)
         setPaymentAmount(amount)
         setIsLoading(false)
@@ -73,23 +67,11 @@ export default function PaymentPage() {
         localStorage.setItem("paymentStatus", "completed")
         localStorage.setItem("paymentDate", new Date().toISOString())
 
-        const selectedTestsData = selectedTests.map((testId) => {
-          const test = allTests.find((t) => t.id === testId)
-          return {
-            id: testId,
-            name: test?.name || "",
-            price: test?.price || 0,
-            paymentDate: new Date().toISOString(),
-            duration: 30,
-            totalQuestions: testId === 1 ? 30 : testId === 2 ? 35 : 41,
-            status: "pending",
-            progressPercentage: 0,
-          }
-        })
-        localStorage.setItem("paidTests", JSON.stringify(selectedTestsData))
+        // Save the full test objects so they can be rendered in the assessment list
+        localStorage.setItem("paidTests", JSON.stringify(selectedTests))
 
         setTimeout(() => {
-          router.push("/?tab=assessments")
+          router.push("/assessments")
         }, 1500)
       } else {
         setPaymentStatus("failed")
@@ -171,15 +153,12 @@ export default function PaymentPage() {
               <div className="mb-8 pb-8 border-b border-input">
                 <h3 className="font-semibold text-foreground mb-4">Order Summary</h3>
                 <div className="space-y-3">
-                  {selectedTests.map((testId) => {
-                    const test = allTests.find((t) => t.id === testId)
-                    return (
-                      <div key={testId} className="flex justify-between items-center">
-                        <span className="text-sm text-foreground font-medium">{test?.name}</span>
-                        <span className="text-sm text-foreground font-semibold">₹{test?.price.toLocaleString()}</span>
-                      </div>
-                    )
-                  })}
+                  {selectedTests.map((test) => (
+                    <div key={test.id} className="flex justify-between items-center">
+                      <span className="text-sm text-foreground font-medium">{test.evaluation_name}</span>
+                      <span className="text-sm text-foreground font-semibold">₹{test.evaluation_cost.toLocaleString()}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
