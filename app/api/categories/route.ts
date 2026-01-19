@@ -4,7 +4,7 @@ export async function GET() {
   try {
     console.log("[v0] Proxy: Fetching categories from backend...")
 
-    const response = await fetch("http://31.97.63.174:9010/api/categories", {
+    const response = await fetch("http://52.207.90.22:8000/api/categories", {
       method: "GET",
       cache: "no-store",
       headers: {

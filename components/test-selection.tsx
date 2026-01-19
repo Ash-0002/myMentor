@@ -109,7 +109,7 @@ export default function TestSelection({ onTestsChange }: { onTestsChange?: (test
     const fetchCategories = async () => {
       try {
         setError(null)
-        const response = await apiClient.get("/categories/")
+        const response = await apiClient.get("/categories/", { timeout: 30000 })
 
         if (response.data?.status === "success" && Array.isArray(response.data.data)) {
           const validCategories = response.data.data.filter((c: Category) => c.category !== "nan")
@@ -135,7 +135,7 @@ export default function TestSelection({ onTestsChange }: { onTestsChange?: (test
 
     setIsLoadingTests(true)
     try {
-      const response = await apiClient.get(`/tests/${categoryId}/`)
+      const response = await apiClient.get(`/tests/${categoryId}/`, { timeout: 30000 })
 
       if (response.data?.status === "success" && Array.isArray(response.data.data)) {
         setTests(response.data.data)

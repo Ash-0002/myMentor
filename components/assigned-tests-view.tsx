@@ -40,8 +40,8 @@ interface QuestionResponse {
 const fetchTestQuestionCount = async (testId: number): Promise<number> => {
   try {
     const response = await axios.get<QuestionResponse>(
-      `http://31.97.63.174:9010/api/question-options/${testId}?page=1`,
-      { timeout: 10000 },
+      `http://52.207.90.22:8000/api/question-options/${testId}?page=1`,
+      { timeout: 30000 },
     )
 
     if (response.data?.status === "success" && response.data?.data) {

@@ -4,7 +4,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params
   try {
     console.log(`[v0] Proxy: Fetching tests for category ${id}...`)
-    const response = await fetch(`http://31.97.63.174:9010/api/tests/${id}`, {
+    const response = await fetch(`http://52.207.90.22:8000/api/tests/${id}`, {
       method: "GET",
       cache: "no-store",
       headers: {
