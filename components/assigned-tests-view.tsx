@@ -40,7 +40,7 @@ interface QuestionResponse {
 const fetchTestQuestionCount = async (testId: number): Promise<number> => {
   try {
     const response = await axios.get<QuestionResponse>(
-      `http://52.207.90.22:8000/api/question-options/${testId}?page=1`,
+      `/api/external/question-options/${testId}?page=1`,
       { timeout: 30000 },
     )
 
