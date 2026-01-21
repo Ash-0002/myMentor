@@ -41,7 +41,7 @@ export default function PatientInfo() {
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Attending Doctor</p>
             <div className="text-base text-foreground font-medium">
-              <p>Dr. Sweeney</p>
+              <p>Dr. Hansh</p>
             </div>
           </div>
         </div>

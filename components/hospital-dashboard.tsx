@@ -123,13 +123,13 @@ export default function HospitalDashboard() {
                 <p className="text-muted-foreground text-xs md:text-sm mt-1">Patient Test Management System</p>
               </div>
             </div>
-            <div className="flex items-center gap-4 flex-shrink-0">
+            {/* <div className="flex items-center gap-4 flex-shrink-0">
               <ThemeSelector />
               <div className="text-right">
                 <p className="text-sm font-medium text-foreground">10:30 AM</p>
                 <p className="text-sm text-muted-foreground">19/08/2023</p>
               </div>
-            </div>
+            </div> */}
           </div>
         </header>
 
