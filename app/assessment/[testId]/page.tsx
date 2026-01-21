@@ -97,9 +97,8 @@ export default function AssessmentPage() {
 
       try {
         console.log("[v0] Starting fetch for test ID:", testId)
-        // Note: Using the IP address directly can cause SSL issues. 
-        // Ensure the server has a valid certificate or is trusted.
-        const apiUrl = `http://52.207.90.22:8000/api/question-options/${testId}?page=1`
+        // Note: Using the proxy configured in next.config.mjs to avoid Mixed Content errors
+        const apiUrl = `/api/external/question-options/${testId}?page=1`
         console.log("[v0] API URL:", apiUrl)
 
         const response = await axios.get<QuestionResponse>(
