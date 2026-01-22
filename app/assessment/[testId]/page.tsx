@@ -23,8 +23,10 @@ interface Question {
 }
 
 interface QuestionResponse {
-  status: string
-  data: Question[]
+  results: {
+    status: string
+    data: Question[]
+  }
 }
 
 export default function AssessmentPage() {
@@ -109,12 +111,12 @@ export default function AssessmentPage() {
         console.log("[v0] Questions response status:", response.status)
         console.log("[v0] Questions response data:", response.data)
 
-        if (response.data?.status === "success" && response.data?.data) {
-          if (response.data.data.length === 0) {
+        if (response.data?.results?.status === "success" && response.data?.results?.data) {
+          if (response.data.results.data.length === 0) {
              console.warn("[v0] API returned success but empty data array")
              setError("No questions found for this test.")
           } else {
-             setQuestions(response.data.data)
+             setQuestions(response.data.results.data)
              setError(null)
           }
 
@@ -189,7 +191,7 @@ export default function AssessmentPage() {
         <Card className="p-8 border border-border max-w-sm mx-4">
           <AlertCircle className="w-8 h-8 text-red-500 mb-4 mx-auto" />
           <p className="text-foreground font-semibold text-center">{error || "No questions found"}</p>
-          <Button onClick={() => router.push("/assessments")} className="mt-4 w-full">
+          <Button onClick={() => router.push("/?view=assessments")} className="mt-4 w-full">
             Return to Assessments
           </Button>
         </Card>
@@ -239,6 +241,10 @@ export default function AssessmentPage() {
 
   const handleSubmit = () => {
     router.push("/assessments")
+  }
+
+  const handleQuit = () => {
+    router.push("/?view=assessments")
   }
 
   const formatTime = (seconds: number) => {
@@ -335,6 +341,11 @@ export default function AssessmentPage() {
               <span className="hidden sm:inline">Previous</span>
             </Button>
 
+           <div className="flex items-center gap-2">
+             <Button onClick={handleQuit} className="gap-2 bg-red-600 hover:bg-red-700">
+                Quit
+            </Button>
+
             {currentQuestionIndex === questions.length - 1 ? (
               <Button onClick={handleSubmit} className="bg-green-600 hover:bg-green-700 gap-2">
                 Submit Assessment
@@ -345,6 +356,7 @@ export default function AssessmentPage() {
                 <ChevronRight className="w-4 h-4" />
               </Button>
             )}
+           </div>
           </div>
         </Card>
 

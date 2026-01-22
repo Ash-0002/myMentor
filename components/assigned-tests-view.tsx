@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Clock, AlertCircle, ArrowRight, Loader2 } from "lucide-react"
+import { CheckCircle, Clock, AlertCircle, ArrowRight, Loader2, ArrowLeft } from "lucide-react"
 import axios from "axios"
 
 interface Test {
@@ -26,7 +26,9 @@ interface PaidTest extends Test {
 
 interface QuestionResponse {
   status: string
-  data: Array<{
+  results: {
+    status: string
+    data: Array<{
     id: number
     question: string
     options: Array<{
@@ -36,6 +38,7 @@ interface QuestionResponse {
     }>
   }>
 }
+}
 
 const fetchTestQuestionCount = async (testId: number): Promise<number> => {
   try {
@@ -44,8 +47,8 @@ const fetchTestQuestionCount = async (testId: number): Promise<number> => {
       { timeout: 30000 },
     )
 
-    if (response.data?.status === "success" && response.data?.data) {
-      return response.data.data.length
+    if (response.data?.results?.status === "success" && response.data?.results?.data) {
+      return response.data.results.data.length
     }
     return 0
   } catch (error) {
@@ -143,6 +146,11 @@ export default function AssignedTestsView({ onStartAssessment }: AssignedTestsVi
 
   return (
     <div className="space-y-6">
+      {/* <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => router.push("/")} className="-ml-2">
+            <ArrowLeft className="w-6 h-6" />
+        </Button>
+      </div> */}
       <div>
         <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">My Assessments</h2>
         <p className="text-muted-foreground">

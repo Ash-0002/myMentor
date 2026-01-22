@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { LogOut, Home, Users, Calendar, Menu, X, ClipboardList, Award, Pill } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import PatientInfo from "./patient-info"
 import TestSelection from "./test-selection"
 import ThemeSelector from "./theme-selector"
@@ -17,12 +17,21 @@ export default function HospitalDashboard() {
   const [activeNav, setActiveNav] = useState("dashboard")
   const [isMobile, setIsMobile] = useState(false)
 
+  const searchParams = useSearchParams()
+
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
     checkMobile()
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
+
+  useEffect(() => {
+    const view = searchParams.get("view")
+    if (view) {
+        setActiveNav(view)
+    }
+  }, [searchParams])
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen)
 

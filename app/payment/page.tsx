@@ -71,7 +71,7 @@ export default function PaymentPage() {
         localStorage.setItem("paidTests", JSON.stringify(selectedTests))
 
         setTimeout(() => {
-          router.push("/assessments")
+          router.push("/?view=assessments")
         }, 1500)
       } else {
         setPaymentStatus("failed")
