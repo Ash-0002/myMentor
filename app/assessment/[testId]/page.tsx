@@ -14,6 +14,7 @@ interface Option {
   option: string
   option_no: number
   weightage: number
+  question: number
 }
 
 interface Question {
@@ -23,6 +24,9 @@ interface Question {
 }
 
 interface QuestionResponse {
+  count: number
+  next: string | null
+  previous: string | null
   results: {
     status: string
     data: Question[]
@@ -83,12 +87,14 @@ export default function AssessmentPage() {
   }, [params])
 
   const [questions, setQuestions] = useState<Question[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [nextPageUrl, setNextPageUrl] = useState<string | null>(null)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-  const [answers, setAnswers] = useState<Record<number, number>>({}) // Stores option_no now
-  const [selectedTests, setSelectedTests] = useState<number[]>([]) // Track selected tests    
+  const [answers, setAnswers] = useState<Record<number, number>>({}) // Stores option_no now  
 
   const [timeLeft, setTimeLeft] = useState(1800) // 30 minutes
   const [isLoading, setIsLoading] = useState(true)
+  const [isFetchingMore, setIsFetchingMore] = useState(false)
   const [showWarning, setShowWarning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [testName, setTestName] = useState<string>("")
@@ -117,6 +123,8 @@ export default function AssessmentPage() {
              setError("No questions found for this test.")
           } else {
              setQuestions(response.data.results.data)
+             setTotalCount(response.data.count)
+             setNextPageUrl(response.data.next)
              setError(null)
           }
 
@@ -174,6 +182,11 @@ export default function AssessmentPage() {
     return () => clearInterval(timer)
   }, [timeLeft, isLoading, showWarning, questions.length])
 
+  // Debug: Log answers whenever they change
+  useEffect(() => {
+    console.log("Updated Answers:", answers)
+  }, [answers])
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -200,7 +213,8 @@ export default function AssessmentPage() {
   }
 
   const currentQuestion = questions[currentQuestionIndex]
-  const testProgress = ((currentQuestionIndex + 1) / questions.length) * 100
+  const displayTotal = totalCount || questions.length
+  const testProgress = ((currentQuestionIndex + 1) / displayTotal) * 100
   const selectedAnswer = answers[currentQuestion.id] // This is now option_no
 
   const handleSelectAnswer = (option_no: number) => {
@@ -208,28 +222,45 @@ export default function AssessmentPage() {
       ...prev,
       [currentQuestion.id]: option_no,
     }))
-    // Only add to selectedTests if not already there to avoid duplicates? 
-    // User logic was append: setSelectedTests((prev) => [...prev, currentQuestion.id])
-    if (!selectedTests.includes(currentQuestion.id)) {
-        setSelectedTests((prev) => [...prev, currentQuestion.id])
-    }
     
-    // Auto advance after short delay or immediately? User had immediate next.
-    // setCurrentQuestionIndex((prev) => prev + 1) // User logic
-    
-    // Let's keep user logic but maybe check bounds
+    // Auto advance if not the last question
     if (currentQuestionIndex < questions.length - 1) {
          setCurrentQuestionIndex((prev) => prev + 1)
     }
-
-    console.log("Selected Tests:", selectedTests)
-    console.log("Answers:", answers)
-    console.log("Current Question Index:", currentQuestionIndex)
   }
 
-  const handleNext = () => {
+
+  const handleNext = async () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1)
+    } else if (nextPageUrl) {
+      // Fetch next page
+      setIsFetchingMore(true)
+      try {
+        // Construct proxy URL from next URL
+        // Expected format: http://.../api/question-options/29?page=2
+        // We want: /api/external/question-options/${testId}?page=2
+        const urlObj = new URL(nextPageUrl)
+        const pageParam = urlObj.searchParams.get("page")
+        
+        if (pageParam && testId) {
+           const proxyUrl = `/api/external/question-options/${testId}?page=${pageParam}`
+           console.log("[v0] Fetching next page:", proxyUrl)
+           
+           const response = await axios.get<QuestionResponse>(proxyUrl)
+           if (response.data?.results?.data) {
+             setQuestions(prev => [...prev, ...response.data.results.data])
+             setNextPageUrl(response.data.next)
+             setCurrentQuestionIndex(prev => prev + 1)
+           }
+        } else {
+          console.error("Could not parse page param from next url:", nextPageUrl)
+        }
+      } catch (err) {
+        console.error("Error fetching more questions:", err)
+      } finally {
+        setIsFetchingMore(false)
+      }
     }
   }
 
@@ -240,7 +271,7 @@ export default function AssessmentPage() {
   }
 
   const handleSubmit = () => {
-    router.push("/assessments")
+    router.push("/?view=assessments")
   }
 
   const handleQuit = () => {
@@ -277,7 +308,7 @@ export default function AssessmentPage() {
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-xs md:text-sm font-medium text-muted-foreground">
-                Question {currentQuestionIndex + 1} of {questions.length}
+                Question {currentQuestionIndex + 1} of {displayTotal}
               </span>
               <span className="text-xs md:text-sm font-medium text-muted-foreground">
                 Overall Progress: {Math.round(testProgress)}%
@@ -346,14 +377,23 @@ export default function AssessmentPage() {
                 Quit
             </Button>
 
-            {currentQuestionIndex === questions.length - 1 ? (
+            {!nextPageUrl && currentQuestionIndex === questions.length - 1 ? (
               <Button onClick={handleSubmit} className="bg-green-600 hover:bg-green-700 gap-2">
                 Submit Assessment
               </Button>
             ) : (
-              <Button onClick={handleNext} className="gap-2">
-                Next
-                <ChevronRight className="w-4 h-4" />
+              <Button onClick={handleNext} disabled={isFetchingMore} className="gap-2">
+                {isFetchingMore ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </>
+                )}
               </Button>
             )}
            </div>
@@ -364,21 +404,29 @@ export default function AssessmentPage() {
         <div className="mt-8">
           <p className="text-xs text-muted-foreground mb-3 font-semibold">QUESTION MAP</p>
           <div className="grid grid-cols-10 md:grid-cols-15 gap-2">
-            {questions.map((_, index) => (
+            {Array.from({ length: displayTotal }).map((_, index) => {
+              const isLoaded = index < questions.length
+              const question = isLoaded ? questions[index] : null
+              const isAnswered = question ? answers[question.id] !== undefined : false
+              
+              return (
               <button
                 key={index}
-                onClick={() => setCurrentQuestionIndex(index)}
+                onClick={() => isLoaded && setCurrentQuestionIndex(index)}
+                disabled={!isLoaded}
                 className={`w-8 h-8 rounded text-xs font-semibold transition-all ${
                   index === currentQuestionIndex
                     ? "bg-primary text-primary-foreground"
-                    : answers[currentQuestion.id] !== undefined
+                    : isAnswered
                       ? "bg-green-100 text-green-700 border border-green-300"
-                      : "bg-muted text-muted-foreground border border-input hover:border-primary"
+                      : !isLoaded 
+                        ? "bg-muted/50 text-muted-foreground/50 border border-input cursor-not-allowed"
+                        : "bg-muted text-muted-foreground border border-input hover:border-primary"
                 }`}
               >
                 {index + 1}
               </button>
-            ))}
+            )})}
           </div>
         </div>
       </main>

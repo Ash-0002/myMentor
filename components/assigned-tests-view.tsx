@@ -25,7 +25,8 @@ interface PaidTest extends Test {
 }
 
 interface QuestionResponse {
-  status: string
+  // status: string
+  count: number
   results: {
     status: string
     data: Array<{
@@ -46,9 +47,9 @@ const fetchTestQuestionCount = async (testId: number): Promise<number> => {
       `/api/external/question-options/${testId}?page=1`,
       { timeout: 30000 },
     )
-
-    if (response.data?.results?.status === "success" && response.data?.results?.data) {
-      return response.data.results.data.length
+    console.log("[v0] Question count for test ${testId}:", response.data.count)
+    if (response.data?.results?.status === "success") {
+      return response.data.count
     }
     return 0
   } catch (error) {
