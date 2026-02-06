@@ -2,13 +2,15 @@ import { ArrowRight, CheckCircle, Shield, Clock, Users } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import HospitalDashboard from "@/components/hospital-dashboard"
+import { Suspense } from "react"
 
 export default function Home() {
   return (
-    
+        <Suspense fallback={<div>Loading...</div>}>
         <main className="min-h-screen bg-background">
           <HospitalDashboard />
         </main>
+        </Suspense>
       
     // <div className="min-h-screen bg-background">
     //   {/* Navigation */}
