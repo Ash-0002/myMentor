@@ -6,9 +6,11 @@ import { Suspense } from "react"
 
 export default function Home() {
   return (
-        <main className="min-h-screen bg-background">
-          <HospitalDashboard />
-        </main>
+        <Suspense fallback={<div>Loading...</div>}>
+          <main className="min-h-screen bg-background">
+            <HospitalDashboard />
+          </main>
+        </Suspense>
       
     // <div className="min-h-screen bg-background">
     //   {/* Navigation */}
