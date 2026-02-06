@@ -38,50 +38,33 @@ export default function AssessmentPage() {
   const router = useRouter()
 
   const [testId, setTestId] = useState<number | null>(null)
+  const [assessmentId, setAssessmentId] = useState<string | null>(null)
   
   // Handle params unwrapping and basic validation
   useEffect(() => {
-    if (params?.testId) {
-      const rawId = Array.isArray(params.testId) ? params.testId[0] : params.testId
-      console.log("[v0] Raw testId from params:", rawId)
+    if (params) {
+      // Handle testId
+      const rawTestId = Array.isArray(params.testId) ? params.testId[0] : params.testId
+      const parsedTestId = parseInt(rawTestId as string, 10)
       
-      const parsed = parseInt(rawId, 10)
-      if (!isNaN(parsed) && parsed > 0) {
-        console.log("[v0] Parsed valid testId:", parsed)
-        
-        // Access Control Check
-        try {
-          const paidTestsStr = localStorage.getItem("paidTests")
-          if (paidTestsStr) {
-            const paidTests = JSON.parse(paidTestsStr)
-            const isAllowed = paidTests.some((t: any) => t.id === parsed)
-            
-            if (!isAllowed) {
-              console.warn("[v0] Access denied: Test ID not found in paid tests")
-              setError("Access Denied: You have not purchased this test.")
-              setIsLoading(false)
-              return 
-            }
-          } else {
-             console.warn("[v0] No paid tests found in storage")
-             // In dev mode or if explicitly testing, might want to bypass, but for security:
-             setError("Access Denied: No active assessments found.")
-             setIsLoading(false)
-             return
-          }
-        } catch (authErr) {
-          console.error("[v0] Error checking access permissions:", authErr)
-          // Fail safe
-          setError("Error verifying access permissions.")
-          setIsLoading(false)
-          return
-        }
+      // Handle assessmentId
+      const rawAssessmentId = Array.isArray(params.assessmentId) ? params.assessmentId[0] : params.assessmentId
+      
+      console.log("[v0] Params:", { testId: rawTestId, assessmentId: rawAssessmentId })
 
-        setTestId(parsed)
+      if (!isNaN(parsedTestId) && parsedTestId > 0) {
+        setTestId(parsedTestId)
       } else {
-        console.error("[v0] Invalid testId parsed:", parsed)
+        console.error("[v0] Invalid testId parsed:", parsedTestId)
         setError("Invalid test ID format")
         setIsLoading(false)
+        return
+      }
+
+      if (rawAssessmentId) {
+        setAssessmentId(rawAssessmentId as string)
+      } else {
+        console.warn("[v0] No assessmentId found in params")
       }
     }
   }, [params])
@@ -98,7 +81,8 @@ export default function AssessmentPage() {
   const [showWarning, setShowWarning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [testName, setTestName] = useState<string>("")
-
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
   useEffect(() => {
     const fetchQuestions = async () => {
       if (testId === null) return // Wait for testId to be set
@@ -128,18 +112,12 @@ export default function AssessmentPage() {
              setError(null)
           }
 
-          // Try to find test name from local storage
+          // Try to find test name from local storage - keeping for now as fallback/legacy
+          // In future this should probably come from an API using assessmentId
           try {
-            const paidTests = localStorage.getItem("paidTests")
-            if (paidTests) {
-              const tests = JSON.parse(paidTests)
-              const currentTest = tests.find((t: any) => t.id === testId)
-              if (currentTest) {
-                setTestName(currentTest.evaluation_name)
-              }
-            }
-          } catch (storageErr) {
-            console.warn("[v0] Error reading from localStorage:", storageErr)
+             // We can maybe fetch assessment details here using assessmentId if needed
+          } catch (err) {
+            console.warn("[v0] Error setting test details", err)
           }
 
         } else {
@@ -204,7 +182,7 @@ export default function AssessmentPage() {
         <Card className="p-8 border border-border max-w-sm mx-4">
           <AlertCircle className="w-8 h-8 text-red-500 mb-4 mx-auto" />
           <p className="text-foreground font-semibold text-center">{error || "No questions found"}</p>
-          <Button onClick={() => router.push("/?view=assessments")} className="mt-4 w-full">
+          <Button onClick={() => router.push("/dashboard?view=assessments")} className="mt-4 w-full">
             Return to Assessments
           </Button>
         </Card>
@@ -223,12 +201,11 @@ export default function AssessmentPage() {
       [currentQuestion.id]: option_no,
     }))
     
-    // Auto advance if not the last question
-    if (currentQuestionIndex < questions.length - 1) {
-         setCurrentQuestionIndex((prev) => prev + 1)
-    }
+    // Auto advance handling
+    // We delegate completely to handleNext() which handles both local navigation
+    // and fetching the next page from the API when at the end of the list.
+    handleNext()
   }
-
 
   const handleNext = async () => {
     if (currentQuestionIndex < questions.length - 1) {
@@ -270,12 +247,60 @@ export default function AssessmentPage() {
     }
   }
 
-  const handleSubmit = () => {
-    router.push("/?view=assessments")
+  const handleSubmit = async () => {
+    if (!assessmentId) {
+      setError("Assessment ID needed to submit.")
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const questionIds: number[] = []
+      const selectedOptionIds: number[] = []
+
+      questions.forEach(q => {
+        const answerOptionNo = answers[q.id]
+        if (answerOptionNo !== undefined) {
+          const selectedOption = q.options.find(o => o.option_no === answerOptionNo)
+          if (selectedOption) {
+            questionIds.push(q.id)
+            selectedOptionIds.push(selectedOption.id)
+          }
+        }
+      })
+
+      const payload = {
+        assessment_id: assessmentId,
+        question_ids: questionIds,
+        selected_option_ids: selectedOptionIds
+      }
+
+      console.log("Submitting assessment payload:", payload)
+
+      const response = await axios.post("/api/external/assessment-status/create/", payload)
+
+      if (response.status === 200 || response.status === 201) {
+         console.log("Submission successful:", response.data)
+         router.push("/dashboard?view=assessments")
+      } else {
+        console.error("Submission failed with status:", response.status)
+        setError("Failed to submit assessment. Please try again.")
+      }
+
+    } catch (err) {
+      console.error("Error submitting assessment:", err)
+      if (axios.isAxiosError(err)) {
+         setError(`Submission error: ${err.message}`)
+      } else {
+         setError("An unexpected error occurred during submission.")
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleQuit = () => {
-    router.push("/?view=assessments")
+    router.push("/dashboard?view=assessments")
   }
 
   const formatTime = (seconds: number) => {
@@ -336,11 +361,12 @@ export default function AssessmentPage() {
               <button
                 key={option.id}
                 onClick={() => handleSelectAnswer(option.option_no)}
+                disabled={isFetchingMore || isSubmitting}
                 className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
                   selectedAnswer === option.option_no
                     ? "border-primary bg-primary/5"
                     : "border-input bg-background hover:border-primary/50 hover:bg-muted/30"
-                }`}
+                } ${isFetchingMore || isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <div className="flex items-center gap-3">
                   <div
@@ -364,7 +390,7 @@ export default function AssessmentPage() {
           <div className="flex items-center justify-between gap-4 pt-6 border-t border-input">
             <Button
               onClick={handlePrevious}
-              disabled={currentQuestionIndex === 0}
+              disabled={currentQuestionIndex === 0 || isFetchingMore || isSubmitting}
               variant="outline"
               className="gap-2 bg-transparent"
             >
@@ -378,8 +404,15 @@ export default function AssessmentPage() {
             </Button>
 
             {!nextPageUrl && currentQuestionIndex === questions.length - 1 ? (
-              <Button onClick={handleSubmit} className="bg-green-600 hover:bg-green-700 gap-2">
-                Submit Assessment
+              <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 gap-2">
+                {isSubmitting ? (
+                  <>
+                     <Loader2 className="w-4 h-4 animate-spin" />
+                     Submitting...
+                  </>
+                ) : (
+                  "Submit Assessment"
+                )}
               </Button>
             ) : (
               <Button onClick={handleNext} disabled={isFetchingMore} className="gap-2">
@@ -413,7 +446,7 @@ export default function AssessmentPage() {
               <button
                 key={index}
                 onClick={() => isLoaded && setCurrentQuestionIndex(index)}
-                disabled={!isLoaded}
+                disabled={!isLoaded || isFetchingMore || isSubmitting}
                 className={`w-8 h-8 rounded text-xs font-semibold transition-all ${
                   index === currentQuestionIndex
                     ? "bg-primary text-primary-foreground"

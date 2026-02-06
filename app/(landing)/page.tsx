@@ -15,11 +15,11 @@ export default function LandingPage() {
             <span className="text-xl font-bold text-foreground hidden sm:inline">MediCare</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/login">
+            <Link href="/(auth)/login">
               <Button variant="outline">Login</Button>
             </Link>
-            <Link href="/dashboard">
-              <Button>Get Started</Button>
+            <Link href="/(auth)/register">
+              <Button>Register</Button>
             </Link>
           </div>
         </div>
@@ -36,12 +36,12 @@ export default function LandingPage() {
             patient data, and generate detailed reports.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <Link href="/dashboard">
+            <Link href="/(auth)/register">
               <Button size="lg" className="w-full sm:w-auto">
-                Dashboard <ArrowRight className="ml-2 w-4 h-4" />
+                Get Started <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
             </Link>
-            <Link href="/login">
+            <Link href="/(auth)/login">
               <Button size="lg" variant="outline" className="w-full sm:w-auto bg-transparent">
                 Sign In
               </Button>

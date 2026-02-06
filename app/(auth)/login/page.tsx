@@ -20,8 +20,9 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     // Simulate login - replace with actual authentication
+    localStorage.setItem("isLoggedIn", "true")
     setTimeout(() => {
-      router.push("/")
+      router.push("/dashboard")
     }, 1000)
   }
 

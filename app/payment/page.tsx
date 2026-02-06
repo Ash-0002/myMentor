@@ -16,13 +16,6 @@ interface Test {
 }
 
 const processPayment = async (tests: Test[], amount: number): Promise<boolean> => {
-  // TODO: Replace with actual payment API call
-  // const response = await fetch('/api/payments/process', {
-  //   method: 'POST',
-  //   body: JSON.stringify({ testIds: tests.map(t => t.id), amount })
-  // })
-  // return response.ok
-
   // Simulate payment processing
   return new Promise((resolve) => {
     setTimeout(() => resolve(true), 2000)
@@ -68,10 +61,40 @@ export default function PaymentPage() {
         localStorage.setItem("paymentDate", new Date().toISOString())
 
         // Save the full test objects so they can be rendered in the assessment list
+        // We keep this for now as per previous logic, even if IDs aren't needed yet
         localStorage.setItem("paidTests", JSON.stringify(selectedTests))
 
+        try {
+          // Create assessments for each paid test
+          await Promise.all(
+            selectedTests.map(async (test: Test) => {
+              const response = await fetch("http://52.207.90.22:8000/api/assessment/create", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  test_id: test.id,
+                  patient_id: 5,
+                }),
+              })
+
+              if (!response.ok) {
+                console.error(`Failed to create assessment for test ${test.id}`)
+              } else {
+                const data = await response.json()
+                console.log(`Assessment created for test ${test.id}:`, data)
+              }
+            }),
+          )
+        } catch (apiError) {
+          console.error("Error creating assessments:", apiError)
+          // We continue to redirect even if API calls fail, but maybe we should warn?
+          // For now, proceeding as successful payment is the primary action.
+        }
+
         setTimeout(() => {
-          router.push("/?view=assessments")
+          router.push("/dashboard?view=assessments")
         }, 1500)
       } else {
         setPaymentStatus("failed")

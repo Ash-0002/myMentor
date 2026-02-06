@@ -2,90 +2,60 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Card } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Clock, AlertCircle, ArrowRight, Loader2, ArrowLeft } from "lucide-react"
+import { Progress } from "@/components/ui/progress"
+import { CheckCircle, Clock, AlertCircle, ChevronRight, PlayCircle, FileText, Loader2, ArrowRight } from "lucide-react"
 import axios from "axios"
 
-interface Test {
-  id: number
-  evaluation_code: string
+interface Assessment {
+  patient_id: string
+  assessment_id: string
+  assessment_status: string
+  test_name: string
+  test_duration: number
+  amount_paid: number
+  total_questions: number
+  test_id: number
+}
+
+interface PaidTest {
+  assessment_id: string
   evaluation_name: string
-  evaluation_fullname: string
   evaluation_cost: number
   evaluation_time: number
-}
-
-interface PaidTest extends Test {
-  status: "pending" | "in_progress" | "completed"
-  progressPercentage: number
   totalQuestions: number
-  paymentDate: string
+  status: string
+  progressPercentage: number
+  paymentDate?: string
+  test_id: number
 }
 
-interface QuestionResponse {
-  // status: string
-  count: number
-  results: {
-    status: string
-    data: Array<{
-    id: number
-    question: string
-    options: Array<{
-      id: number
-      option_text: string
-      weightage: number
-    }>
-  }>
-}
-}
-
-const fetchTestQuestionCount = async (testId: number): Promise<number> => {
+const fetchAssignedTests = async (): Promise<PaidTest[]> => {
   try {
-    const response = await axios.get<QuestionResponse>(
-      `/api/external/question-options/${testId}?page=1`,
-      { timeout: 30000 },
+    const response = await axios.get<{ message: string; data: Assessment[] }>(
+      "http://52.207.90.22:8000/api/patient/assessments?patient_id=5",
     )
-    console.log("[v0] Question count for test ${testId}:", response.data.count)
-    if (response.data?.results?.status === "success") {
-      return response.data.count
+
+    if (response.data?.data && Array.isArray(response.data.data)) {
+      return response.data.data.map((assessment) => ({
+        assessment_id: assessment.assessment_id,
+        evaluation_name: assessment.test_name,
+        evaluation_cost: assessment.amount_paid,
+        evaluation_time: assessment.test_duration,
+        totalQuestions: assessment.total_questions,
+        status: assessment.assessment_status,
+        progressPercentage: 0,
+        test_id: assessment.test_id,
+        paymentDate: new Date().toISOString(), // Fallback
+      }))
     }
-    return 0
+    return []
   } catch (error) {
-    console.log("[v0] Error fetching question count for test ${testId}:", error)
-    return 0
+    console.error("[v0] Error fetching assigned tests:", error)
+    return []
   }
-}
-
-const getPaidTests = async (): Promise<PaidTest[]> => {
-  const storedTests = localStorage.getItem("paidTests")
-  const paymentStatus = localStorage.getItem("paymentStatus")
-
-  if (paymentStatus === "completed" && storedTests) {
-    try {
-      const tests: Test[] = JSON.parse(storedTests)
-
-      const testsWithQuestionCounts = await Promise.all(
-        tests.map(async (test) => {
-          const questionCount = await fetchTestQuestionCount(test.id)
-          return {
-            ...test,
-            status: "pending" as const,
-            progressPercentage: 0,
-            totalQuestions: questionCount,
-            paymentDate: new Date().toISOString(),
-          }
-        }),
-      )
-
-      return testsWithQuestionCounts
-    } catch (error) {
-      console.log("[v0] Error loading paid tests", error)
-      return []
-    }
-  }
-  return []
 }
 
 interface AssignedTestsViewProps {
@@ -96,38 +66,57 @@ export default function AssignedTestsView({ onStartAssessment }: AssignedTestsVi
   const router = useRouter()
   const [paidTests, setPaidTests] = useState<PaidTest[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null)
 
   useEffect(() => {
     const loadTests = async () => {
       setIsLoading(true)
-      const tests = await getPaidTests()
+      const tests = await fetchAssignedTests()
       setPaidTests(tests)
       setIsLoading(false)
     }
     loadTests()
   }, [])
 
-  const startAssessment = (testId: number) => {
-    localStorage.setItem("currentTestId", String(testId))
-    router.push(`/assessment/${testId}`)
+  const handleStartAssessment = (testId: number, assessmentId: string) => {
+    router.push(`/assessment/${testId}/${assessmentId}`)
+  }
+
+  const handleViewReport = async (assessmentId: string) => {
+    setDownloadingReportId(assessmentId)
+    try {
+      const response = await axios.post(
+        "/api/external/assessment-report/create/",
+        { assessment_id: assessmentId },
+        // { responseType: "blob" }
+      )
+      
+      const url = response.data.report_url;
+      window.open(url, '_blank')
+    } catch (error) {
+      console.error("Error downloading report:", error)
+      alert("Failed to generate report. Please try again.")
+    } finally {
+      setDownloadingReportId(null)
+    }
   }
 
   const getStatusColor = (status: PaidTest["status"]) => {
     switch (status) {
-      case "completed":
+      case "Completed":
         return "bg-green-100 text-green-700"
-      case "in_progress":
-        return "bg-blue-100 text-blue-700"
-      default:
+      case "Pending":
         return "bg-yellow-100 text-yellow-700"
+        default:
+          return "bg-blue-100 text-blue-700"
     }
   }
 
   const getStatusIcon = (status: PaidTest["status"]) => {
     switch (status) {
-      case "completed":
+      case "Completed":
         return <CheckCircle className="w-5 h-5" />
-      case "in_progress":
+      case "Pending":
         return <Clock className="w-5 h-5" />
       default:
         return <AlertCircle className="w-5 h-5" />
@@ -153,9 +142,9 @@ export default function AssignedTestsView({ onStartAssessment }: AssignedTestsVi
         </Button>
       </div> */}
       <div>
-        <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">My Assessments</h2>
+        <h2 className="tenxt-2xl md:text-3xl font-bold text-foreground mb-2">My Assessments</h2>
         <p className="text-muted-foreground">
-          You have {paidTests.filter((t) => t.status === "pending").length} assessment(s) waiting to be completed
+          You have {paidTests.filter((t) => t.status === "Pending" || t.status === "In Progress").length} assessment(s) waiting to be completed
         </p>
       </div>
 
@@ -169,7 +158,7 @@ export default function AssignedTestsView({ onStartAssessment }: AssignedTestsVi
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {paidTests.map((test) => (
             <Card
-              key={test.id}
+              key={test.assessment_id}
               className={`p-6 border transition-all hover:shadow-lg ${
                 test.status === "pending"
                   ? "border-border hover:border-primary cursor-pointer"
@@ -201,7 +190,7 @@ export default function AssignedTestsView({ onStartAssessment }: AssignedTestsVi
                 </div>
               </div>
 
-              {test.status === "completed" ? (
+              {test.status === "Completed" ? (
                 <div className="space-y-2">
                   <div className="flex justify-between items-center text-sm mb-2">
                     <span className="text-muted-foreground">Progress</span>
@@ -210,11 +199,25 @@ export default function AssignedTestsView({ onStartAssessment }: AssignedTestsVi
                   <div className="w-full bg-muted rounded-full h-2">
                     <div className="bg-green-600 h-2 rounded-full" style={{ width: "100%" }}></div>
                   </div>
-                  <Button disabled className="w-full mt-4 opacity-50">
-                    Completed
+                  <Button 
+                    className="w-full bg-blue-600 hover:bg-blue-700 mt-4 gap-2"
+                    onClick={() => handleViewReport(test.assessment_id)}
+                    disabled={downloadingReportId === test.assessment_id}
+                  >
+                    {downloadingReportId === test.assessment_id ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Generating PDF...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-4 h-4" />
+                        View Report
+                      </>
+                    )}
                   </Button>
                 </div>
-              ) : test.status === "in_progress" ? (
+              ) : test.status === "Pending" ? (
                 <div className="space-y-2">
                   <div className="flex justify-between items-center text-sm mb-2">
                     <span className="text-muted-foreground">Progress</span>
@@ -226,14 +229,14 @@ export default function AssignedTestsView({ onStartAssessment }: AssignedTestsVi
                       style={{ width: `${test.progressPercentage}%` }}
                     ></div>
                   </div>
-                  <Button onClick={() => startAssessment(test.id)} className="w-full mt-4 gap-2">
+                  <Button onClick={() => handleStartAssessment(test.test_id,test.assessment_id)} className="w-full mt-4 gap-2">
                     Continue Assessment
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 </div>
               ) : (
                 <Button
-                  onClick={() => startAssessment(test.id)}
+                  onClick={() => handleStartAssessment(test.test_id,test.assessment_id)}
                   className="w-full gap-2 bg-primary hover:bg-primary/90"
                 >
                   Start Assessment
