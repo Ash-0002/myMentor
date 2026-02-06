@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import HospitalDashboard from "@/components/hospital-dashboard"
 
@@ -17,7 +17,9 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <HospitalDashboard />
+      <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading dashboard...</div>}>
+        <HospitalDashboard />
+      </Suspense>
     </main>
   )
 }
