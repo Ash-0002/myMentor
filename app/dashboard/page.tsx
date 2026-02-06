@@ -7,13 +7,13 @@ import HospitalDashboard from "@/components/hospital-dashboard"
 export default function DashboardPage() {
   const router = useRouter()
 
-  useEffect(() => {
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem("isLoggedIn")
-    if (!isLoggedIn) {
-      router.push("/login")
-    }
-  }, [router])
+  // useEffect(() => {
+  //   // Check if user is logged in
+  //   const isLoggedIn = localStorage.getItem("isLoggedIn")
+  //   if (!isLoggedIn) {
+  //     router.push("/login")
+  //   }
+  // }, [router])
 
   return (
     <main className="min-h-screen bg-background">
