@@ -68,7 +68,7 @@ export default function PaymentPage() {
           // Create assessments for each paid test
           await Promise.all(
             selectedTests.map(async (test: Test) => {
-              const response = await fetch("http://52.207.90.22:8000/api/assessment/create", {
+              const response = await fetch("/api/external/assessment/create", {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",

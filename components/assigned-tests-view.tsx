@@ -35,7 +35,7 @@ interface PaidTest {
 const fetchAssignedTests = async (): Promise<PaidTest[]> => {
   try {
     const response = await axios.get<{ message: string; data: Assessment[] }>(
-      "http://52.207.90.22:8000/api/patient/assessments?patient_id=5",
+      "/api/external/patient/assessments?patient_id=5",
     )
 
     if (response.data?.data && Array.isArray(response.data.data)) {
