@@ -46,6 +46,11 @@ export default function HospitalDashboard() {
 
   const closeSidebar = () => setSidebarOpen(false)
 
+  const handleLogout = () => {
+    localStorage.clear()
+    router.push("/login")
+  }
+
   return (
     <div className="flex h-screen bg-background">
       {sidebarOpen && (
@@ -98,7 +103,7 @@ export default function HospitalDashboard() {
 
           {/* Logout */}
           <div className="p-3 border-t border-sidebar-border">
-            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent/10 transition-colors">
+            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent/10 transition-colors">
               <LogOut className="w-5 h-5 flex-shrink-0" />
               <span className="text-sm font-medium">Logout</span>
             </button>

@@ -2,28 +2,55 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, Eye, EyeOff } from "lucide-react"
+import { loginUser } from "@/lib/auth-service"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
   const router = useRouter()
+
+  useEffect(() => {
+    if (localStorage.getItem("isLoggedIn") === "true") {
+      router.push("/dashboard")
+    }
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    // Simulate login - replace with actual authentication
-    localStorage.setItem("isLoggedIn", "true")
-    setTimeout(() => {
+    setError("")
+
+    try {
+      const data = await loginUser({ username: email, password })
+      
+      // Store user info if available
+      if (data.data) {
+        localStorage.setItem("user", JSON.stringify(data.data));
+      }
+      
+      if (data.tokens) {
+        localStorage.setItem("accessToken", data.tokens.access);
+        localStorage.setItem("refreshToken", data.tokens.refresh);
+      }
+      
+      localStorage.setItem("isLoggedIn", "true");
+
+
       router.push("/dashboard")
-    }, 1000)
+    } catch (err: any) {
+      setError(err.message || "Invalid credentials")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -47,6 +74,12 @@ export default function LoginPage() {
             <h1 className="text-2xl font-bold text-foreground mb-2">MediCare Login</h1>
             <p className="text-muted-foreground text-sm">Sign in to access your dashboard</p>
           </div>
+
+          {error && (
+            <div className="p-3 mb-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
