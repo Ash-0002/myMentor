@@ -58,10 +58,13 @@ export async function loginUser(credentials: LoginCredentials): Promise<any> {
 } 
 
 export async function registerPatient(formData: FormData): Promise<any> {
+  console.log('--- verify registerPatient called ---');
+  console.log('Target URL: /api/external/patient/create');
+
   // calculate age from dob if not present or just pass what we have
   // The API expects specific fields. We will rely on the formData passed from the component.
   
-  const response = await fetch('/api/local/patient/create', {
+  const response = await fetch('/api/external/patient/create', {
     method: 'POST',
     body: formData, 
     // Content-Type header is automatically set for FormData with boundary

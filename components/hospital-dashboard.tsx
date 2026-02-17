@@ -48,6 +48,7 @@ export default function HospitalDashboard() {
 
   const handleLogout = () => {
     localStorage.clear()
+    document.cookie = "auth_token=; path=/; max-age=0; SameSite=Strict; Secure"
     router.push("/login")
   }
 

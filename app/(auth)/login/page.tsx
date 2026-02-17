@@ -40,6 +40,9 @@ export default function LoginPage() {
       if (data.tokens) {
         localStorage.setItem("accessToken", data.tokens.access);
         localStorage.setItem("refreshToken", data.tokens.refresh);
+        
+        // Set cookie for middleware
+        document.cookie = `auth_token=${data.tokens.access}; path=/; max-age=86400; SameSite=Strict; Secure`;
       }
       
       localStorage.setItem("isLoggedIn", "true");
