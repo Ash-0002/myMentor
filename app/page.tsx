@@ -36,8 +36,8 @@ export default function Home() {
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 md:px-6 py-20 md:py-32">
         <div className="text-center space-y-6 mb-12">
-          <h1 className="text-4xl md:text-6xl font-bold text-foreground text-balance">
-            Advanced Patient Assessment System
+          <h1 className="text-2xl md:text-4xl font-bold text-foreground text-balance">
+           MyMentor-Advanced Assessment System (MAAS)
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-4xl mx-auto text-balance">
             Comprehensive evaluation and diagnostic tools for healthcare professionals. Streamline assessments, manage
@@ -46,7 +46,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <Link href="/register">
               <Button size="lg" className="w-full sm:w-auto">
-                Get Started <ArrowRight className="ml-2 w-4 h-4" />
+                Get Started - Login <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
             </Link>
             <Link href="/login">
@@ -61,13 +61,14 @@ export default function Home() {
         <div className="grid md:grid-cols-4 gap-6 py-12">
           {[
             { icon: Clock, title: "Fast Assessment", desc: "Complete evaluations in minutes" },
-            { icon: Shield, title: "Secure & HIPAA", desc: "Protected patient data" },
+            { icon: Shield, title: "(DPDP) Act 2023", desc: "Secures & Protects Data", subDesc: "GDPR & HIPAA Compliant" },
             { icon: Users, title: "Multi-User", desc: "Collaborate with your team" },
             { icon: CheckCircle, title: "Detailed Reports", desc: "Comprehensive analysis" },
           ].map((feature, i) => (
             <div key={i} className="p-6 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors">
               <feature.icon className="w-8 h-8 text-primary mb-3" />
               <h3 className="font-semibold text-foreground mb-2">{feature.title}</h3>
+              <p className="font-semibold text-sm text-muted-foreground">{feature.subDesc}</p>
               <p className="text-sm text-muted-foreground">{feature.desc}</p>
             </div>
           ))}

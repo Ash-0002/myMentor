@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -31,23 +29,19 @@ export default function LoginPage() {
 
     try {
       const data = await loginUser({ username: email, password })
-      
-      // Store user info if available
+
       if (data.data) {
-        localStorage.setItem("user", JSON.stringify(data.data));
+        localStorage.setItem("user", JSON.stringify(data.data))
       }
-      
+
       if (data.tokens) {
-        localStorage.setItem("accessToken", data.tokens.access);
-        localStorage.setItem("refreshToken", data.tokens.refresh);
-        
-        // Set cookie for middleware
-        document.cookie = `auth_token=${data.tokens.access}; path=/; max-age=86400; SameSite=Strict; Secure`;
+        localStorage.setItem("accessToken", data.tokens.access)
+        localStorage.setItem("refreshToken", data.tokens.refresh)
+        document.cookie = `auth_token=${data.tokens.access}; path=/; max-age=86400; SameSite=Strict`
+        document.cookie = `session=active; path=/; max-age=86400; SameSite=Strict`
       }
-      
-      localStorage.setItem("isLoggedIn", "true");
 
-
+      localStorage.setItem("isLoggedIn", "true")
       router.push("/dashboard")
     } catch (err: any) {
       setError(err.message || "Invalid credentials")
@@ -122,7 +116,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 pt-6 border-t border-border text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/register" className="text-primary hover:underline font-medium">
               Register here
             </Link>
