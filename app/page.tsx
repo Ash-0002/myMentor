@@ -20,7 +20,7 @@ export default function Home() {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-lg font-bold text-primary-foreground">+</span>
             </div>
-            <span className="text-xl font-bold text-foreground hidden sm:inline">MediCare</span>
+            <span className="text-xl font-bold text-foreground hidden sm:inline">MyMentor</span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/login">
@@ -78,7 +78,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-border bg-muted/30 py-8">
         <div className="max-w-7xl mx-auto px-4 md:px-6 text-center text-muted-foreground">
-          <p>&copy; 2025 MediCare Hospital. All rights reserved.</p>
+          <p>&copy; 2025 MyMentor. All rights reserved.</p>
         </div>
       </footer>
     </div>

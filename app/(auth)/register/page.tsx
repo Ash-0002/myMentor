@@ -1,209 +1,95 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { ArrowLeft, Eye, EyeOff } from "lucide-react"
+import { useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Card } from "@/components/ui/card";
+import { ShieldCheck, User, Plus, Home } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export default function RegisterPage() {
-  const [formData, setFormData] = useState({
-    first_name: "",
-    last_name: "",
-    username: "",
-    gender: "",
-    date_of_birth: "",
-    mobile: "",
-    email: "",
-    address: "",
-    password: "",
-    confirm_password: "",
-  })
-
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const router = useRouter()
+export default function RegisterSelectPage() {
+  const router = useRouter();
 
   useEffect(() => {
     if (localStorage.getItem("isLoggedIn") === "true") {
-      router.push("/dashboard")
+      router.push("/dashboard");
     }
-  }, [router])
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
-
-    if (!formData.first_name || !formData.email || !formData.password || !formData.mobile) {
-      setError("Please fill in all required fields")
-      setLoading(false)
-      return
-    }
-
-    if (formData.password !== formData.confirm_password) {
-      setError("Passwords do not match")
-      setLoading(false)
-      return
-    }
-
-    try {
-      const data = new FormData()
-      Object.entries(formData).forEach(([key, value]) => data.append(key, value))
-      data.append("role_id", "3")
-
-      const { registerPatient } = await import("@/lib/auth-service")
-      const response = await registerPatient(data)
-
-      if (response.message === "patient created successfully") {
-        localStorage.setItem("isLoggedIn", "true")
-        router.push("/dashboard")
-      } else {
-        setError(response.message || "Registration failed")
-        setLoading(false)
-      }
-    } catch (err: any) {
-      setError(err.message || "Registration failed. Please try again.")
-      setLoading(false)
-    }
-  }
+  }, [router]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
-        <div className="mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">Back to Home</span>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Clean Navigation Bar */}
+      <nav className="h-16 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto h-full px-4 md:px-8 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center group-hover:rotate-6 transition-transform">
+              <span className="text-sm font-bold text-primary-foreground">+</span>
+            </div>
+            <span className="text-lg font-bold">MyMentor</span>
+          </Link>
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary">
+              <Home className="w-4 h-4" />
+              <span className="hidden sm:inline">Portal</span>
+            </Button>
           </Link>
         </div>
+      </nav>
 
-        <Card className="p-8 border border-border">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl font-bold text-primary-foreground">+</span>
+      <div className="flex-1 flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent">
+        <div className="w-full max-w-2xl space-y-12">
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-2 text-primary animate-in zoom-in-50 duration-500">
+              <Plus className="w-8 h-8" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground mb-2">Create Account</h1>
-            <p className="text-muted-foreground text-sm">Register as a patient to get started</p>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Join MyMentor</h1>
+            <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+              Select your account type to begin your journey with our advanced assessment system.
+            </p>
           </div>
 
-          {error && (
-            <div className="p-3 mb-6 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
-              {error}
-            </div>
-          )}
+          <div className="grid sm:grid-cols-2 gap-8">
+            <Link href="/register/admin" className="group">
+              <Card className="p-10 border border-border/50 group-hover:border-primary/50 transition-all duration-300 h-full flex flex-col items-center text-center space-y-6 hover:shadow-2xl hover:shadow-primary/5 relative overflow-hidden bg-card/80 backdrop-blur-sm">
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors" />
+                <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
+                  <ShieldCheck className="w-10 h-10" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-xl font-bold">Admin</h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Access tools for patient management, clinical assessments, and detailed reporting.
+                  </p>
+                </div>
+              </Card>
+            </Link>
 
-          <form onSubmit={handleRegister} className="space-y-6">
-            {/* Personal Details */}
-            <div>
-              <h3 className="font-semibold text-base border-b pb-2 mb-4">Personal Details</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">First Name *</label>
-                  <input type="text" name="first_name" value={formData.first_name} onChange={handleChange}
-                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all" required />
+            <Link href="/register/patient" className="group">
+              <Card className="p-10 border border-border/50 group-hover:border-primary/50 transition-all duration-300 h-full flex flex-col items-center text-center space-y-6 hover:shadow-2xl hover:shadow-primary/5 relative overflow-hidden bg-card/80 backdrop-blur-sm">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors" />
+                <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
+                  <User className="w-10 h-10" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Last Name</label>
-                  <input type="text" name="last_name" value={formData.last_name} onChange={handleChange}
-                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all" />
+                <div className="space-y-2">
+                  <h2 className="text-xl font-bold">Patient</h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Register to take assessments, track your progress, and view your records.
+                  </p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Username</label>
-                  <input type="text" name="username" value={formData.username} onChange={handleChange}
-                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Gender</label>
-                  <select name="gender" value={formData.gender} onChange={handleChange}
-                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all">
-                    <option value="">Select Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Date of Birth</label>
-                  <input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleChange}
-                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all" />
-                </div>
-
-              </div>
-            </div>
-
-            {/* Contact Details */}
-            <div>
-              <h3 className="font-semibold text-base border-b pb-2 mb-4">Contact Details</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Mobile *</label>
-                  <input type="tel" name="mobile" value={formData.mobile} onChange={handleChange}
-                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all" required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Email *</label>
-                  <input type="email" name="email" value={formData.email} onChange={handleChange}
-                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all" required />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Address</label>
-                  <textarea name="address" value={formData.address} onChange={handleChange} rows={3}
-                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all resize-none" />
-                </div>
-              </div>
-            </div>
-
-            {/* Security */}
-            <div>
-              <h3 className="font-semibold text-base border-b pb-2 mb-4">Security</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Password *</label>
-                  <div className="relative">
-                    <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all" required />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Confirm Password *</label>
-                  <div className="relative">
-                    <input type={showConfirmPassword ? "text" : "password"} name="confirm_password" value={formData.confirm_password} onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all" required />
-                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating Account..." : "Create Account"}
-            </Button>
-          </form>
-
-          <div className="mt-6 pt-6 border-t border-border text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link href="/login" className="text-primary hover:underline font-medium">
-              Login here
+              </Card>
             </Link>
           </div>
-        </Card>
+
+          <div className="text-center pt-4">
+            <p className="text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <Link href="/login" className="text-primary hover:underline font-bold">
+                Sign in here
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
-  )
+  );
 }
