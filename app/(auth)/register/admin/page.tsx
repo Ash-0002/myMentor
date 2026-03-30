@@ -5,15 +5,20 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ArrowLeft, Eye, EyeOff, LayoutDashboard } from "lucide-react"
+import { ArrowLeft, Eye, EyeOff } from "lucide-react"
+import { buildRegistrationFormData, registerPatient, USER_ROLE } from "@/lib/auth-service"
 
 export default function AdminRegisterPage() {
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
     username: "",
+    gender: "",
+    age: "",
+    date_of_birth: "",
     email: "",
-    mobile: "",
+    phone: "",
+    address: "",
     password: "",
     confirm_password: "",
   })
@@ -29,7 +34,7 @@ export default function AdminRegisterPage() {
     }
   }, [router])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
@@ -39,7 +44,15 @@ export default function AdminRegisterPage() {
     setError("")
     setLoading(true)
 
-    if (!formData.first_name || !formData.email || !formData.password || !formData.mobile) {
+    if (
+      !formData.first_name ||
+      !formData.email ||
+      !formData.password ||
+      !formData.phone ||
+      !formData.username ||
+      !formData.gender ||
+      !formData.age
+    ) {
       setError("Please fill in all required fields")
       setLoading(false)
       return
@@ -52,14 +65,10 @@ export default function AdminRegisterPage() {
     }
 
     try {
-      const data = new FormData()
-      Object.entries(formData).forEach(([key, value]) => data.append(key, value))
-      data.append("role_id", "1") // Admin role
-
-      const { registerPatient } = await import("@/lib/auth-service")
+      const data = buildRegistrationFormData(formData, USER_ROLE.HOSPITAL_ADMIN.id)
       const response = await registerPatient(data)
 
-      if (response.message?.includes("success")) {
+      if (response.message?.toLowerCase().includes("success")) {
         router.push("/login")
       } else {
         setError(response.message || "Registration failed")
@@ -102,7 +111,7 @@ export default function AdminRegisterPage() {
         <div className="w-full max-w-xl">
           <Card className="p-10 border-border/50 shadow-2xl shadow-primary/5 bg-card/80 backdrop-blur-xl">
             <div className="space-y-2 mb-10 text-center">
-              <h1 className="text-2xl font-bold tracking-tight">Admin Portal</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Admin Registration</h1>
               <p className="text-muted-foreground text-sm">Set up your administrator profile</p>
             </div>
 
@@ -135,14 +144,39 @@ export default function AdminRegisterPage() {
                       className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium" required />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground ml-1">Mobile *</label>
-                    <input type="tel" name="mobile" value={formData.mobile} onChange={handleChange}
+                    <label className="text-xs font-semibold text-muted-foreground ml-1">Gender *</label>
+                    <select name="gender" value={formData.gender} onChange={handleChange}
+                      className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium" required>
+                      <option value="">Select Gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground ml-1">Age *</label>
+                    <input type="number" name="age" value={formData.age} onChange={handleChange} min={1}
+                      className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium" required />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground ml-1">Date of Birth</label>
+                    <input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleChange}
+                      className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground ml-1">Phone *</label>
+                    <input type="tel" name="phone" value={formData.phone} onChange={handleChange}
                       className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium" required />
                   </div>
                   <div className="md:col-span-2 space-y-1.5">
                     <label className="text-xs font-semibold text-muted-foreground ml-1">Email *</label>
                     <input type="email" name="email" value={formData.email} onChange={handleChange}
                       className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium" required />
+                  </div>
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground ml-1">Address</label>
+                    <input type="text" name="address" value={formData.address} onChange={handleChange}
+                      className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium" />
                   </div>
                 </div>
               </div>

@@ -32,10 +32,10 @@ interface PaidTest {
   test_id: number
 }
 
-const fetchAssignedTests = async (): Promise<PaidTest[]> => {
+const fetchAssignedTests = async (patientId: string): Promise<PaidTest[]> => {
   try {
     const response = await axios.get<{ message: string; data: Assessment[] }>(
-      "/api/external/patient/assessments?patient_id=5",
+      `/api/external/patient/assessments?patient_id=${encodeURIComponent(patientId)}`,
     )
 
     if (response.data?.data && Array.isArray(response.data.data)) {
@@ -60,9 +60,10 @@ const fetchAssignedTests = async (): Promise<PaidTest[]> => {
 
 interface AssignedTestsViewProps {
   onStartAssessment?: () => void
+  patientId?: string
 }
 
-export default function AssignedTestsView({ onStartAssessment }: AssignedTestsViewProps) {
+export default function AssignedTestsView({ onStartAssessment, patientId }: AssignedTestsViewProps) {
   const router = useRouter()
   const [paidTests, setPaidTests] = useState<PaidTest[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -70,13 +71,19 @@ export default function AssignedTestsView({ onStartAssessment }: AssignedTestsVi
 
   useEffect(() => {
     const loadTests = async () => {
+      if (!patientId) {
+        setPaidTests([])
+        setIsLoading(false)
+        return
+      }
+
       setIsLoading(true)
-      const tests = await fetchAssignedTests()
+      const tests = await fetchAssignedTests(patientId)
       setPaidTests(tests)
       setIsLoading(false)
     }
     loadTests()
-  }, [])
+  }, [patientId])
 
   const handleStartAssessment = (testId: number, assessmentId: string) => {
     router.push(`/assessment/${testId}/${assessmentId}`)

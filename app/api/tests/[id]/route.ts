@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server"
+import { buildBackendApiUrl } from "@/lib/backend-api"
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   try {
     console.log(`[v0] Proxy: Fetching tests for category ${id}...`)
-    const response = await fetch(`http://52.207.90.22:8000/api/tests/${id}`, {
+    const response = await fetch(buildBackendApiUrl(`/tests/${id}`), {
       method: "GET",
       cache: "no-store",
       headers: {

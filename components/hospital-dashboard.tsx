@@ -1,14 +1,21 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { LogOut, Home, Users, Calendar, Menu, X, ClipboardList, Award, Pill } from "lucide-react"
+import { LogOut, Home, Users, Calendar, Menu, X, ClipboardList, Award } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import PatientInfo from "./patient-info"
 import TestSelection from "./test-selection"
-import ThemeSelector from "./theme-selector"
 import AssignedTestsView from "./assigned-tests-view"
 import TestResultsView from "./test-results-view"
 import { Card } from "@/components/ui/card"
+import {
+  DashboardUser,
+  DashboardUserType,
+  getDashboardUserType,
+  isAdminDashboardUser,
+  isIndividualDashboardUser,
+  normalizeDashboardUser,
+} from "@/lib/dashboard-user"
 
 export default function HospitalDashboard() {
   const router = useRouter()
@@ -16,6 +23,8 @@ export default function HospitalDashboard() {
   const [selectedTests, setSelectedTests] = useState<any[]>([])
   const [activeNav, setActiveNav] = useState("dashboard")
   const [isMobile, setIsMobile] = useState(false)
+  const [user, setUser] = useState<DashboardUser | null>(null)
+  const [userType, setUserType] = useState<DashboardUserType | null>(null)
 
   const searchParams = useSearchParams()
 
@@ -32,6 +41,28 @@ export default function HospitalDashboard() {
         setActiveNav(view)
     }
   }, [searchParams])
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user")
+    if (!storedUser) {
+      router.push("/login")
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(storedUser)
+      const normalized = normalizeDashboardUser(parsed)
+      if (!normalized) {
+        router.push("/login")
+        return
+      }
+
+      setUser(normalized)
+      setUserType(getDashboardUserType(normalized))
+    } catch {
+      router.push("/login")
+    }
+  }, [router])
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen)
 
@@ -53,6 +84,32 @@ export default function HospitalDashboard() {
     document.cookie = "session=; path=/; max-age=0; SameSite=Strict"
     router.push("/login")
   }
+
+  const navItems =
+    userType === "admin"
+      ? [
+          { icon: Home, label: "Dashboard", id: "dashboard" },
+          { icon: Users, label: "Patients", id: "patients" },
+          { icon: Calendar, label: "Appointments", id: "appointments" },
+        ]
+      : [
+          { icon: Home, label: "Dashboard", id: "dashboard" },
+          { icon: ClipboardList, label: "My Assessments", id: "assessments" },
+          { icon: Award, label: "Test Results", id: "results" },
+        ]
+
+  const headerTitle =
+    userType === "admin" && user && isAdminDashboardUser(user) ? user.hospital_name : "MyMentor Dashboard"
+  const headerId =
+    userType === "admin" && user && isAdminDashboardUser(user)
+      ? user.hospital_id
+      : userType === "individual" && user && isIndividualDashboardUser(user)
+        ? user.patient_id
+        : "-"
+  const headerIdLabel = userType === "admin" ? "H" : "P"
+  const headerSubtitle =
+    userType === "admin" ? "Hospital Admin Dashboard" : "Patient Assessment Dashboard"
+  const patientId = userType === "individual" && user && isIndividualDashboardUser(user) ? user.patient_id : undefined
 
   return (
     <div className="flex h-screen bg-background">
@@ -77,14 +134,7 @@ export default function HospitalDashboard() {
 
           {/* Navigation */}
           <nav className="flex-1 px-3 py-6 space-y-2">
-            {[
-              { icon: Home, label: "Dashboard", id: "dashboard" },
-              // { icon: Pill, label: "Select Tests", id: "test-selection", onClick: navigateToTestSelection },
-              { icon: Users, label: "Patients", id: "patients" },
-              { icon: Calendar, label: "Appointments", id: "appointments" },
-              { icon: ClipboardList, label: "My Assessments", id: "assessments" },
-              { icon: Award, label: "Test Results", id: "results" },
-            ].map((item) => (
+            {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => {
@@ -129,15 +179,15 @@ export default function HospitalDashboard() {
               </button>
               <div className="min-w-0">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="text-2xl md:text-3xl font-bold text-foreground text-balance">MediCare Hospital</h1>
+                  <h1 className="text-2xl md:text-3xl font-bold text-foreground text-balance">{headerTitle}</h1>
                   <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-lg border border-primary/20">
                     <div className="w-6 h-6 bg-primary/20 rounded flex items-center justify-center">
-                      <span className="text-xs font-bold text-primary">H</span>
+                      <span className="text-xs font-bold text-primary">{headerIdLabel}</span>
                     </div>
-                    <span className="text-sm font-bold text-primary font-mono">H001</span>
+                    <span className="text-sm font-bold text-primary font-mono">{headerId}</span>
                   </div>
                 </div>
-                <p className="text-muted-foreground text-xs md:text-sm mt-1">Patient Test Management System</p>
+                <p className="text-muted-foreground text-xs md:text-sm mt-1">{headerSubtitle}</p>
               </div>
             </div>
             {/* <div className="flex items-center gap-4 flex-shrink-0">
@@ -154,12 +204,14 @@ export default function HospitalDashboard() {
         <div className="flex-1 overflow-auto p-4 md:p-8">
           {activeNav === "dashboard" && (
             <div className="space-y-6">
-              <PatientInfo />
-              <TestSelection onTestsChange={setSelectedTests} />
+              <PatientInfo user={user} userType={userType} />
+              {userType === "individual" && <TestSelection onTestsChange={setSelectedTests} />}
             </div>
           )}
 
-          {activeNav === "assessments" && <AssignedTestsView onStartAssessment={() => handleNavigation("dashboard")} />}
+          {activeNav === "assessments" && (
+            <AssignedTestsView patientId={patientId} onStartAssessment={() => handleNavigation("dashboard")} />
+          )}
 
           {activeNav === "results" && <TestResultsView />}
 

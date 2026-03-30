@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || "http://187.127.132.226:8000"
+
 const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
@@ -10,27 +12,27 @@ const nextConfig = {
     return [
       {
         source: '/api/local/:path*',
-        destination: 'http://127.0.0.1:8000/api/:path*',
+        destination: `${BACKEND_BASE_URL}/api/:path*`,
       },
       {
         source: '/api/external/assessment-report/create',
-        destination: 'http://52.207.90.22:8000/api/assessment-report/create',
+        destination: `${BACKEND_BASE_URL}/api/assessment-report/create`,
       },
       {
         source: '/api/external/assessment-status/create',
-        destination: 'http://52.207.90.22:8000/api/assessment-status/create',
+        destination: `${BACKEND_BASE_URL}/api/assessment-status/create`,
       },
       {
         source: '/api/external/user-login',
-        destination: 'http://52.207.90.22:8000/api/user-login',
+        destination: `${BACKEND_BASE_URL}/api/user-login`,
       },
       {
         source: '/token',
-        destination: 'http://52.207.90.22:8000/api/token',
+        destination: `${BACKEND_BASE_URL}/api/token`,
       },
       {
         source: '/api/external/:path*',
-        destination: 'http://52.207.90.22:8000/api/:path*',
+        destination: `${BACKEND_BASE_URL}/api/:path*`,
       },
     ]
   },

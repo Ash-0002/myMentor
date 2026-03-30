@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, Eye, EyeOff, Home, LayoutDashboard } from "lucide-react"
 import { loginUser } from "@/lib/auth-service"
+import { normalizeDashboardUser } from "@/lib/dashboard-user"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -31,7 +32,11 @@ export default function LoginPage() {
       const data = await loginUser({ username: email, password })
 
       if (data.data) {
-        localStorage.setItem("user", JSON.stringify(data.data))
+        const normalizedUser = normalizeDashboardUser(data.data)
+        if (!normalizedUser) {
+          throw new Error("Invalid user details returned by login API")
+        }
+        localStorage.setItem("user", JSON.stringify(normalizedUser))
       }
 
       if (data.tokens) {
@@ -89,12 +94,12 @@ export default function LoginPage() {
 
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground ml-1">Email</label>
+                <label className="text-xs font-semibold text-muted-foreground ml-1">Username / Email</label>
                 <input
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
+                  placeholder="Enter username or email"
                   className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium"
                 />
               </div>

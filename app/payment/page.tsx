@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Check, Loader2, AlertCircle } from "lucide-react"
+import { isIndividualDashboardUser } from "@/lib/dashboard-user"
 
 interface Test {
   id: number
@@ -29,10 +30,12 @@ export default function PaymentPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentStatus, setPaymentStatus] = useState<"pending" | "success" | "failed">("pending")
   const [isLoading, setIsLoading] = useState(true)
+  const [patientId, setPatientId] = useState("")
 
   useEffect(() => {
     const storedTests = localStorage.getItem("selectedTests")
     const storedAmount = localStorage.getItem("paymentAmount")
+    const storedUser = localStorage.getItem("user")
 
     if (storedTests && storedAmount) {
       try {
@@ -40,6 +43,12 @@ export default function PaymentPage() {
         const amount = Number.parseFloat(storedAmount)
         setSelectedTests(tests)
         setPaymentAmount(amount)
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser)
+          if (isIndividualDashboardUser(parsedUser)) {
+            setPatientId(parsedUser.patient_id)
+          }
+        }
         setIsLoading(false)
       } catch (error) {
         console.log("[v0] Error loading payment data", error)
@@ -51,6 +60,11 @@ export default function PaymentPage() {
   }, [])
 
   const handlePayment = async () => {
+    if (!patientId) {
+      setPaymentStatus("failed")
+      return
+    }
+
     setIsProcessing(true)
     try {
       const success = await processPayment(selectedTests, paymentAmount)
@@ -65,32 +79,26 @@ export default function PaymentPage() {
         localStorage.setItem("paidTests", JSON.stringify(selectedTests))
 
         try {
-          // Create assessments for each paid test
-          await Promise.all(
-            selectedTests.map(async (test: Test) => {
-              const response = await fetch("/api/external/assessment/create", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  test_id: test.id,
-                  patient_id: 5,
-                }),
-              })
-
-              if (!response.ok) {
-                console.error(`Failed to create assessment for test ${test.id}`)
-              } else {
-                const data = await response.json()
-                console.log(`Assessment created for test ${test.id}:`, data)
-              }
+          const response = await fetch("/api/external/assessment/create", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              test_ids: selectedTests.map((test) => test.id),
+              patient_ids: [patientId],
             }),
-          )
+          })
+
+          if (!response.ok) {
+            const errorText = await response.text()
+            console.error("Failed to create assessment:", errorText)
+          } else {
+            const data = await response.json()
+            console.log("Assessment created:", data)
+          }
         } catch (apiError) {
           console.error("Error creating assessments:", apiError)
-          // We continue to redirect even if API calls fail, but maybe we should warn?
-          // For now, proceeding as successful payment is the primary action.
         }
 
         setTimeout(() => {
@@ -160,7 +168,9 @@ export default function PaymentPage() {
                 <AlertCircle className="w-8 h-8 text-red-600" />
               </div>
               <h2 className="text-2xl font-bold text-foreground mb-2">Payment Failed</h2>
-              <p className="text-muted-foreground mb-6">Please try again or contact support</p>
+              <p className="text-muted-foreground mb-6">
+                {!patientId ? "Patient ID not found in session. Please login again." : "Please try again or contact support"}
+              </p>
               <Button
                 onClick={() => {
                   setPaymentStatus("pending")

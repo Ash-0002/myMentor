@@ -5,7 +5,13 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ArrowLeft, Eye, EyeOff, LayoutDashboard } from "lucide-react"
+import { ArrowLeft, Eye, EyeOff } from "lucide-react"
+import { buildRegistrationFormData, registerPatient, USER_ROLE } from "@/lib/auth-service"
+
+interface Hospital {
+  id: string
+  hospital_name: string
+}
 
 export default function PatientRegisterPage() {
   const [formData, setFormData] = useState({
@@ -13,13 +19,18 @@ export default function PatientRegisterPage() {
     last_name: "",
     username: "",
     gender: "",
+    age: "",
     date_of_birth: "",
-    mobile: "",
+    phone: "",
     email: "",
     address: "",
     password: "",
     confirm_password: "",
   })
+  const [patientType, setPatientType] = useState<"individual patient" | "hospital patient">("individual patient")
+  const [selectedHospitalId, setSelectedHospitalId] = useState("")
+  const [hospitals, setHospitals] = useState<Hospital[]>([])
+  const [isLoadingHospitals, setIsLoadingHospitals] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -37,13 +48,57 @@ export default function PatientRegisterPage() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  useEffect(() => {
+    if (patientType !== "hospital patient") return
+    if (hospitals.length > 0) return
+
+    const loadHospitals = async () => {
+      setIsLoadingHospitals(true)
+      try {
+        const response = await fetch("/api/external/hospitals")
+        const json = await response.json().catch(() => ({}))
+
+        if (!response.ok) {
+          throw new Error(json?.message || "Failed to load hospitals")
+        }
+
+        const hospitalList = Array.isArray(json?.data) ? json.data : []
+        setHospitals(
+          hospitalList
+            .filter((hospital: any) => typeof hospital?.id === "string" && typeof hospital?.hospital_name === "string")
+            .map((hospital: any) => ({ id: hospital.id, hospital_name: hospital.hospital_name })),
+        )
+      } catch (err: any) {
+        setError(err.message || "Unable to load hospital list")
+      } finally {
+        setIsLoadingHospitals(false)
+      }
+    }
+
+    loadHospitals()
+  }, [patientType, hospitals.length])
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setLoading(true)
 
-    if (!formData.first_name || !formData.email || !formData.password || !formData.mobile) {
+    if (
+      !formData.first_name ||
+      !formData.email ||
+      !formData.password ||
+      !formData.phone ||
+      !formData.username ||
+      !formData.gender ||
+      !formData.age
+    ) {
       setError("Please fill in all required fields")
+      setLoading(false)
+      return
+    }
+
+    if (patientType === "hospital patient" && !selectedHospitalId) {
+      setError("Please select a hospital")
       setLoading(false)
       return
     }
@@ -55,16 +110,16 @@ export default function PatientRegisterPage() {
     }
 
     try {
-      const data = new FormData()
-      Object.entries(formData).forEach(([key, value]) => data.append(key, value))
-      data.append("role_id", "3")
-
-      const { registerPatient } = await import("@/lib/auth-service")
+      const roleId = patientType === "hospital patient" ? USER_ROLE.HOSPITAL_PATIENT.id : USER_ROLE.INDIVIDUAL_PATIENT.id
+      const payload = {
+        ...formData,
+        ...(patientType === "hospital patient" ? { hospital_id: selectedHospitalId } : {}),
+      }
+      const data = buildRegistrationFormData(payload, roleId)
       const response = await registerPatient(data)
 
-      if (response.message === "patient created successfully") {
-        localStorage.setItem("isLoggedIn", "true")
-        router.push("/dashboard")
+      if (response.message?.toLowerCase().includes("success")) {
+        router.push("/login")
       } else {
         setError(response.message || "Registration failed")
         setLoading(false)
@@ -119,6 +174,52 @@ export default function PatientRegisterPage() {
             <form onSubmit={handleRegister} className="space-y-8">
               <div className="space-y-6">
                 <div className="flex items-center gap-3 border-b border-border pb-2">
+                  <span className="text-xs font-bold uppercase tracking-widest text-primary/70">Registration Type</span>
+                </div>
+                <div className="grid md:grid-cols-2 gap-x-6 gap-y-5">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground ml-1">Patient Type *</label>
+                    <select
+                      name="patient_type"
+                      value={patientType}
+                      onChange={(e) => {
+                        const value = e.target.value as "individual patient" | "hospital patient"
+                        setPatientType(value)
+                        setSelectedHospitalId("")
+                      }}
+                      className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium"
+                      required
+                    >
+                      <option value="individual patient">Individual Patient</option>
+                      <option value="hospital patient">Hospital Patient</option>
+                    </select>
+                  </div>
+
+                  {patientType === "hospital patient" && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground ml-1">Hospital Name *</label>
+                      <select
+                        name="hospital_id"
+                        value={selectedHospitalId}
+                        onChange={(e) => setSelectedHospitalId(e.target.value)}
+                        className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium"
+                        required
+                        disabled={isLoadingHospitals}
+                      >
+                        <option value="">{isLoadingHospitals ? "Loading hospitals..." : "Select Hospital"}</option>
+                        {hospitals.map((hospital) => (
+                          <option key={hospital.id} value={hospital.id}>
+                            {hospital.hospital_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-border pb-2">
                   <span className="text-xs font-bold uppercase tracking-widest text-primary/70">Personal Details</span>
                 </div>
                 
@@ -134,21 +235,26 @@ export default function PatientRegisterPage() {
                       className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium" />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground ml-1">Username</label>
+                    <label className="text-xs font-semibold text-muted-foreground ml-1">Username *</label>
                     <input type="text" name="username" value={formData.username} onChange={handleChange}
-                      className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium" />
+                      className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium" required />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground ml-1">Gender</label>
+                    <label className="text-xs font-semibold text-muted-foreground ml-1">Gender *</label>
                     <select name="gender" value={formData.gender} onChange={handleChange}
-                      className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium">
+                      className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium" required>
                       <option value="">Select Gender</option>
                       <option value="male">Male</option>
                       <option value="female">Female</option>
                       <option value="other">Other</option>
                     </select>
                   </div>
-                  <div className="md:col-span-2 space-y-1.5">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground ml-1">Age *</label>
+                    <input type="number" name="age" value={formData.age} onChange={handleChange} min={1}
+                      className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium" required />
+                  </div>
+                  <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-muted-foreground ml-1">Date of Birth</label>
                     <input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleChange}
                       className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium" />
@@ -162,8 +268,8 @@ export default function PatientRegisterPage() {
                 </div>
                 <div className="grid md:grid-cols-2 gap-x-6 gap-y-5">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground ml-1">Mobile *</label>
-                    <input type="tel" name="mobile" value={formData.mobile} onChange={handleChange}
+                    <label className="text-xs font-semibold text-muted-foreground ml-1">Phone *</label>
+                    <input type="tel" name="phone" value={formData.phone} onChange={handleChange}
                       className="w-full h-11 px-4 rounded-xl border border-input bg-background/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm font-medium" required />
                   </div>
                   <div className="space-y-1.5">
