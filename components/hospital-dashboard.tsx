@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import PatientInfo from "./patient-info"
 import TestSelection from "./test-selection"
 import AssignedTestsView from "./assigned-tests-view"
-import TestResultsView from "./test-results-view"
+import TestResultsView from "@/components/test-results-view"
 import { Card } from "@/components/ui/card"
 import {
   DashboardUser,
