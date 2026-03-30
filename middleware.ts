@@ -7,6 +7,7 @@ const protectedRoutes = [
   "/billing",
   "/assessment",
   "/assessments",
+  "/test-results",
   "/patient-info",
   "/payment",
 ];
@@ -45,6 +46,7 @@ export const config = {
     "/billing/:path*",
     "/assessment/:path*",
     "/assessments/:path*",
+    "/test-results/:path*",
     "/patient-info/:path*",
     "/payment/:path*",
   ],

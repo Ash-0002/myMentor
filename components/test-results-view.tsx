@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { AlertCircle, Award, Calendar, Loader2, PieChartIcon, TrendingUp } from "lucide-react"
+import { useSearchParams } from "next/navigation"
+import { AlertCircle, Award, Calendar, Loader2, Minimize2, PieChartIcon, TrendingUp } from "lucide-react"
 import axios from "axios"
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts"
 import { Card } from "@/components/ui/card"
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { isIndividualDashboardUser, normalizeDashboardUser } from "@/lib/dashboard-user"
+import { downloadAssessmentReport } from "@/lib/report-download"
 
 interface Assessment {
   assessment_id: string
@@ -74,10 +76,13 @@ async function fetchCompletedAssessments(patientId: string): Promise<Assessment[
 }
 
 export default function TestResultsView() {
+  const searchParams = useSearchParams()
+  const assessmentIdFromQuery = searchParams.get("assessmentId")
   const [completedAssessments, setCompletedAssessments] = useState<Assessment[]>([])
   const [reportsByAssessmentId, setReportsByAssessmentId] = useState<Record<string, AssessmentReport>>({})
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string | null>(null)
   const [loadingReportId, setLoadingReportId] = useState<string | null>(null)
+  const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -103,6 +108,14 @@ export default function TestResultsView() {
     }
     loadAssessments()
   }, [])
+
+  useEffect(() => {
+    if (!assessmentIdFromQuery) return
+    if (completedAssessments.length === 0) return
+    const exists = completedAssessments.some((item) => item.assessment_id === assessmentIdFromQuery)
+    if (!exists) return
+    void generateAndShowReport(assessmentIdFromQuery)
+  }, [assessmentIdFromQuery, completedAssessments])
 
   const totalTests = completedAssessments.length
   const reportsGeneratedCount = Object.keys(reportsByAssessmentId).length
@@ -142,6 +155,22 @@ export default function TestResultsView() {
     } finally {
       setLoadingReportId(null)
     }
+  }
+
+  const handleDownloadReport = async (assessmentId: string) => {
+    setDownloadingReportId(assessmentId)
+    try {
+      await downloadAssessmentReport(assessmentId)
+    } catch (err) {
+      console.error("[v0] Download report error:", err)
+      setError("Failed to download report PDF. Please try again.")
+    } finally {
+      setDownloadingReportId(null)
+    }
+  }
+
+  const handleMinimizeReport = () => {
+    setSelectedAssessmentId(null)
   }
 
   const selectedReport = selectedAssessmentId ? reportsByAssessmentId[selectedAssessmentId] : null
@@ -278,6 +307,15 @@ export default function TestResultsView() {
                         </>
                       )}
                     </Button>
+                    <Button
+                      onClick={() => handleDownloadReport(assessment.assessment_id)}
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 bg-transparent"
+                      disabled={downloadingReportId === assessment.assessment_id}
+                    >
+                      {downloadingReportId === assessment.assessment_id ? "Downloading..." : "Download PDF"}
+                    </Button>
                   </div>
                 </div>
               </Card>
@@ -293,9 +331,15 @@ export default function TestResultsView() {
                     Patient: {selectedReport.patient_data.first_name} {selectedReport.patient_data.last_name}
                   </p>
                 </div>
-                <Badge className="bg-primary/10 text-primary border-0">
-                  Overall Score: {Number(selectedReport.overall_score || 0).toFixed(2)}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-primary/10 text-primary border-0">
+                    Overall Score: {Number(selectedReport.overall_score || 0).toFixed(2)}
+                  </Badge>
+                  <Button variant="outline" className="gap-2 bg-transparent" onClick={handleMinimizeReport}>
+                    <Minimize2 className="w-4 h-4" />
+                    Minimize
+                  </Button>
+                </div>
               </div>
 
               {(showsPieChart || showsHistogram) && selectedChartData.length > 0 && (

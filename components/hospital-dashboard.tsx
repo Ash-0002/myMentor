@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import PatientInfo from "./patient-info"
 import TestSelection from "./test-selection"
 import AssignedTestsView from "./assigned-tests-view"
-import TestResultsView from "@/components/test-results-view"
+import TestResultsView from "./test-results-view"
 import { Card } from "@/components/ui/card"
 import {
   DashboardUser,
@@ -38,7 +38,7 @@ export default function HospitalDashboard() {
   useEffect(() => {
     const view = searchParams.get("view")
     if (view) {
-        setActiveNav(view)
+      setActiveNav(view)
     }
   }, [searchParams])
 
@@ -137,11 +137,7 @@ export default function HospitalDashboard() {
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => {
-                 {
-                    handleNavigation(item.id)
-                  }
-                }}
+                onClick={() => handleNavigation(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   activeNav === item.id
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
