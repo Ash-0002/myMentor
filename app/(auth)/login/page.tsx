@@ -39,17 +39,16 @@ export default function LoginPage() {
         localStorage.setItem("user", JSON.stringify(normalizedUser))
       }
 
-      if (data.tokens) {
-        localStorage.setItem("accessToken", data.tokens.access)
-        localStorage.setItem("refreshToken", data.tokens.refresh)
-        document.cookie = `auth_token=${data.tokens.access}; path=/; max-age=86400; SameSite=Strict`
+      if (data.access_token) {
+        localStorage.setItem("accessToken", data.access_token)
+        document.cookie = `auth_token=${data.access_token}; path=/; max-age=86400; SameSite=Strict`
         document.cookie = `session=active; path=/; max-age=86400; SameSite=Strict`
       }
 
       localStorage.setItem("isLoggedIn", "true")
       router.push("/dashboard")
-    } catch (err: any) {
-      setError(err.message || "Invalid credentials")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid username or password")
     } finally {
       setLoading(false)
     }
@@ -87,9 +86,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="p-4 mb-6 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium animate-in fade-in slide-in-from-top-2">
-                {error}
-              </div>
+              <p className="mb-4 text-center text-sm text-destructive">{error}</p>
             )}
 
             <form onSubmit={handleLogin} className="space-y-6">

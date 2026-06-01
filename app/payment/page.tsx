@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Check, Loader2, AlertCircle } from "lucide-react"
 import { isIndividualDashboardUser } from "@/lib/dashboard-user"
+import { apiFetch } from "@/lib/backend-api"
 
 interface Test {
   id: number
@@ -79,7 +80,7 @@ export default function PaymentPage() {
         localStorage.setItem("paidTests", JSON.stringify(selectedTests))
 
         try {
-          const response = await fetch("/api/external/assessment/create", {
+          const response = await apiFetch("/api/external/assessment/create", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

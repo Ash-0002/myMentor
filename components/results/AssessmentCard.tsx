@@ -6,11 +6,9 @@ import { Button } from "@/components/ui/button"
 import { CheckCircle, Clock, AlertCircle, ArrowRight } from "lucide-react"
 
 interface AssessmentCardProps {
-  assessmentId: string
   title: string
   questions: number
-  duration: number
-  amountPaid: number
+  completedQuestions: number
   status: string
   progressPercentage: number
   onContinue: () => void
@@ -20,8 +18,7 @@ interface AssessmentCardProps {
 export default function AssessmentCard({
   title,
   questions,
-  duration,
-  amountPaid,
+  completedQuestions,
   status,
   progressPercentage,
   onContinue,
@@ -29,7 +26,8 @@ export default function AssessmentCard({
 }: AssessmentCardProps) {
   const normalizedStatus = (status || "").toLowerCase()
   const isCompleted = normalizedStatus === "completed"
-  const isPending = normalizedStatus === "pending" || normalizedStatus === "in progress"
+  const isPending =
+    normalizedStatus === "pending" || normalizedStatus === "in progress" || normalizedStatus === "in_progress"
 
   const statusColor = isCompleted
     ? "bg-green-100 text-green-700"
@@ -46,14 +44,13 @@ export default function AssessmentCard({
   )
 
   const progress = isCompleted ? 100 : Math.max(0, Math.min(100, progressPercentage))
-  const progressColor = isCompleted ? "bg-green-600" : "bg-blue-600"
 
   return (
     <Card className="p-6 border border-border hover:shadow-lg transition-all">
       <div className="mb-4">
         <div className="flex items-start justify-between mb-3 gap-2">
           <h3 className="text-lg font-semibold text-foreground leading-tight">{title}</h3>
-          <Badge className={`${statusColor} border-0 flex-shrink-0 gap-1`}>
+          <Badge className={`${statusColor} border-0 shrink-0 gap-1`}>
             {statusIcon}
             <span className="capitalize text-xs">{status}</span>
           </Badge>
@@ -66,12 +63,10 @@ export default function AssessmentCard({
           <span className="font-semibold text-foreground">{questions}</span>
         </div>
         <div className="flex justify-between items-center text-sm">
-          <span className="text-muted-foreground">Duration</span>
-          <span className="font-semibold text-foreground">{duration} minutes</span>
-        </div>
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-muted-foreground">Amount Paid</span>
-          <span className="font-semibold text-foreground">Rs {amountPaid}</span>
+          <span className="text-muted-foreground">Answered</span>
+          <span className="font-semibold text-foreground">
+            {completedQuestions} / {questions}
+          </span>
         </div>
       </div>
 
@@ -81,7 +76,10 @@ export default function AssessmentCard({
           <span className="font-semibold text-foreground">{progress}%</span>
         </div>
         <div className="w-full bg-muted rounded-full h-2">
-          <div className={`${progressColor} h-2 rounded-full transition-all`} style={{ width: `${progress}%` }} />
+          <div
+            className={`${isCompleted ? "bg-green-600" : "bg-primary"} h-2 rounded-full transition-all`}
+            style={{ width: `${progress}%` }}
+          />
         </div>
       </div>
 

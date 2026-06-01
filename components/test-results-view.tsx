@@ -3,55 +3,19 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { AlertCircle, Award, Calendar, Loader2, Minimize2, PieChartIcon, TrendingUp } from "lucide-react"
-import axios from "axios"
+import { apiClient } from "@/lib/api-client"
+import {
+  fetchPatientAssessments,
+  isCompletedAssessment,
+  type PatientAssessment,
+} from "@/lib/patient-assessments"
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { isIndividualDashboardUser, normalizeDashboardUser } from "@/lib/dashboard-user"
-import { downloadAssessmentReport } from "@/lib/report-download"
-
-interface Assessment {
-  assessment_id: string
-  assessment_status: string
-  test_name: string
-  test_duration: number
-  amount_paid: number
-  total_questions: number
-}
-
-interface AssessmentReportChartData {
-  sub_category: string
-  sub_category_score: number
-  sub_category_descriptor?: Array<{
-    test_descriptor_id: number
-    test_descriptor: string
-  }>
-}
-
-interface AssessmentReport {
-  patient_data: {
-    patient_id: string
-    first_name: string
-    last_name: string
-    username: string
-    role: number
-  }
-  test_name: string
-  overall_score: number
-  interpretation?: {
-    advice?: string
-    result?: string
-    symptoms?: {
-      mental?: string
-      physical?: string
-      conditions_linked?: string
-    }
-  }
-  test_charts?: string
-  test_chart_data?: AssessmentReportChartData[]
-}
+import { downloadAssessmentReportFromData, type AssessmentReport } from "@/lib/report-download"
 
 const CHART_COLORS = ["#2563eb", "#14b8a6", "#8b5cf6", "#f59e0b", "#ef4444", "#22c55e"]
 
@@ -67,18 +31,15 @@ function getPatientIdFromStorage(): string | null {
   }
 }
 
-async function fetchCompletedAssessments(patientId: string): Promise<Assessment[]> {
-  const response = await axios.get<{ data?: Assessment[] }>(
-    `/api/external/patient/assessments?patient_id=${encodeURIComponent(patientId)}`,
-  )
-  const rows = Array.isArray(response.data?.data) ? response.data.data : []
-  return rows.filter((item) => (item.assessment_status || "").toLowerCase() === "completed")
+async function fetchCompletedAssessments(patientId: string): Promise<PatientAssessment[]> {
+  const rows = await fetchPatientAssessments(patientId)
+  return rows.filter(isCompletedAssessment)
 }
 
 export default function TestResultsView() {
   const searchParams = useSearchParams()
   const assessmentIdFromQuery = searchParams.get("assessmentId")
-  const [completedAssessments, setCompletedAssessments] = useState<Assessment[]>([])
+  const [completedAssessments, setCompletedAssessments] = useState<PatientAssessment[]>([])
   const [reportsByAssessmentId, setReportsByAssessmentId] = useState<Record<string, AssessmentReport>>({})
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string | null>(null)
   const [loadingReportId, setLoadingReportId] = useState<string | null>(null)
@@ -138,15 +99,7 @@ export default function TestResultsView() {
 
     setLoadingReportId(assessmentId)
     try {
-      const response = await axios.post<{ data?: AssessmentReport; message?: string }>(
-        "/api/external/assessment-report/create",
-        { assessment_id: assessmentId },
-      )
-      const reportData = response.data?.data
-      if (!reportData) {
-        throw new Error(response.data?.message || "Invalid report response")
-      }
-
+      const reportData = await fetchAssessmentReport(assessmentId)
       setReportsByAssessmentId((prev) => ({ ...prev, [assessmentId]: reportData }))
       setSelectedAssessmentId(assessmentId)
     } catch (err) {
@@ -160,7 +113,14 @@ export default function TestResultsView() {
   const handleDownloadReport = async (assessmentId: string) => {
     setDownloadingReportId(assessmentId)
     try {
-      await downloadAssessmentReport(assessmentId)
+      let reportData = reportsByAssessmentId[assessmentId]
+
+      if (!reportData) {
+        reportData = await fetchAssessmentReport(assessmentId)
+        setReportsByAssessmentId((prev) => ({ ...prev, [assessmentId]: reportData }))
+      }
+
+      await downloadAssessmentReportFromData(assessmentId, reportData)
     } catch (err) {
       console.error("[v0] Download report error:", err)
       setError("Failed to download report PDF. Please try again.")
@@ -173,7 +133,23 @@ export default function TestResultsView() {
     setSelectedAssessmentId(null)
   }
 
+  const fetchAssessmentReport = async (assessmentId: string): Promise<AssessmentReport> => {
+    const response = await apiClient.post<{ data?: AssessmentReport; message?: string }>(
+      "/api/external/assessment-report/create",
+      { assessment_id: assessmentId },
+    )
+
+    const reportData = response.data?.data
+    if (!reportData) {
+      throw new Error(response.data?.message || "Invalid report response")
+    }
+    return reportData
+  }
+
   const selectedReport = selectedAssessmentId ? reportsByAssessmentId[selectedAssessmentId] : null
+  const selectedAssessmentMeta = selectedAssessmentId
+    ? completedAssessments.find((item) => item.assessment_id === selectedAssessmentId) ?? null
+    : null
   const selectedChartData = selectedReport?.test_chart_data ?? []
   const chartType = (selectedReport?.test_charts || "").toLowerCase()
   const showsPieChart = chartType.includes("pie")
@@ -258,32 +234,45 @@ export default function TestResultsView() {
           <div className="space-y-4">
             <h3 className="text-xl font-semibold text-foreground">Completed Assessments</h3>
             {completedAssessments.map((assessment) => (
-              <Card key={assessment.assessment_id} className="p-6 border border-border hover:shadow-lg transition-all">
+              <Card
+                key={assessment.assessment_id}
+                className={`p-6 border hover:shadow-lg transition-all ${
+                  selectedAssessmentId === assessment.assessment_id
+                    ? "border-primary bg-primary/5 shadow-md"
+                    : "border-border"
+                }`}
+              >
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start gap-3 mb-3">
                       <div>
-                        <h3 className="font-semibold text-foreground text-lg leading-tight">{assessment.test_name}</h3>
+                        <h3 className="font-semibold text-foreground text-lg leading-tight">{assessment.test}</h3>
                         <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                           <Calendar className="w-4 h-4" />
-                          Assessment Completed
+                          Assessment ID: {assessment.assessment_id}
                         </div>
                       </div>
                       <Badge className="bg-green-100 text-green-700 border-0">Completed</Badge>
+                      {selectedAssessmentId === assessment.assessment_id && (
+                        <Badge className="bg-primary text-primary-foreground border-0">Opened Report</Badge>
+                      )}
+                      {reportsByAssessmentId[assessment.assessment_id] && selectedAssessmentId !== assessment.assessment_id && (
+                        <Badge variant="secondary" className="border-0">
+                          Report Generated
+                        </Badge>
+                      )}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground mb-1">Questions</p>
                         <p className="text-2xl font-bold text-primary">{assessment.total_questions}</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground mb-1">Duration</p>
-                        <p className="text-2xl font-bold text-green-600">{assessment.test_duration}m</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground mb-1">Amount Paid</p>
-                        <p className="text-2xl font-bold text-blue-600">Rs {assessment.amount_paid}</p>
+                        <p className="text-muted-foreground mb-1">Answered</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {assessment.completed_questions} / {assessment.total_questions}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -303,7 +292,7 @@ export default function TestResultsView() {
                       ) : (
                         <>
                           <PieChartIcon className="w-4 h-4" />
-                          View Report
+                          {selectedAssessmentId === assessment.assessment_id ? "Report Opened" : "View Report"}
                         </>
                       )}
                     </Button>
@@ -324,6 +313,12 @@ export default function TestResultsView() {
 
           {selectedReport && (
             <Card className="p-6 md:p-8 border border-border bg-card">
+              {selectedAssessmentMeta && (
+                <div className="mb-4 text-sm text-muted-foreground">
+                  Currently viewing report for <span className="font-medium text-foreground">{selectedAssessmentMeta.test}</span>{" "}
+                  ({selectedAssessmentMeta.assessment_id})
+                </div>
+              )}
               <div className="flex items-start justify-between gap-4 mb-6">
                 <div>
                   <h3 className="text-2xl font-bold text-foreground">{selectedReport.test_name} Report</h3>

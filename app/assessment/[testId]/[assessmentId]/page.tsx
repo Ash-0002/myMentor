@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { AlertCircle, ChevronLeft, ChevronRight, Clock, Loader2 } from "lucide-react"
-import axios from "axios"
+import { isAxiosError } from "axios"
+import { apiClient } from "@/lib/api-client"
 
 interface Option {
   id: number
@@ -93,7 +94,7 @@ export default function AssessmentPage() {
         const apiUrl = `/api/external/question-options/${testId}?page=1`
         console.log("[v0] API URL:", apiUrl)
 
-        const response = await axios.get<QuestionResponse>(
+        const response = await apiClient.get<QuestionResponse>(
           apiUrl,
           { timeout: 30000 },
         )
@@ -126,7 +127,7 @@ export default function AssessmentPage() {
         }
       } catch (err) {
         console.error("[v0] Error fetching questions:", err)
-        if (axios.isAxiosError(err)) {
+        if (isAxiosError(err)) {
            console.error("[v0] Axios error details:", {
              message: err.message,
              code: err.code,
@@ -224,7 +225,7 @@ export default function AssessmentPage() {
            const proxyUrl = `/api/external/question-options/${testId}?page=${pageParam}`
            console.log("[v0] Fetching next page:", proxyUrl)
            
-           const response = await axios.get<QuestionResponse>(proxyUrl)
+           const response = await apiClient.get<QuestionResponse>(proxyUrl)
            if (response.data?.results?.data) {
              setQuestions(prev => [...prev, ...response.data.results.data])
              setNextPageUrl(response.data.next)
@@ -277,7 +278,7 @@ export default function AssessmentPage() {
 
       console.log("Submitting assessment payload:", payload)
 
-      const response = await axios.post("/api/external/assessment-status/create/", payload)
+      const response = await apiClient.post("/api/external/assessment-status/create/", payload)
 
       if (response.status === 200 || response.status === 201) {
          console.log("Submission successful:", response.data)
@@ -289,7 +290,7 @@ export default function AssessmentPage() {
 
     } catch (err) {
       console.error("Error submitting assessment:", err)
-      if (axios.isAxiosError(err)) {
+      if (isAxiosError(err)) {
          setError(`Submission error: ${err.message}`)
       } else {
          setError("An unexpected error occurred during submission.")

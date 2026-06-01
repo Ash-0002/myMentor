@@ -1,16 +1,19 @@
+import { apiFetch } from "@/lib/backend-api"
+
 export interface LoginCredentials {
   username: string;
   password: string;
 }
 
 export interface LoginResponse {
+  status: string;
   message: string;
   data?: {
     patient_detail?: Record<string, unknown>;
     hospital_detail?: Record<string, unknown>;
-    role?: number | string;
+    role_detail?: { id: number; name: string };
   };
-  error?: string;
+  access_token?: string;
 }
 
 export const USER_ROLE = {
@@ -40,7 +43,15 @@ function flattenApiError(value: unknown, prefix = ""): string[] {
 }
 
 function getApiErrorMessage(errorData: any, fallback: string): string {
-  const source = errorData?.message ?? errorData?.error ?? errorData?.detail ?? errorData;
+  const detail = errorData?.detail;
+  if (detail && typeof detail === "object" && typeof detail.message === "string") {
+    return detail.message;
+  }
+  if (typeof detail === "string") {
+    return detail;
+  }
+
+  const source = errorData?.message ?? errorData?.error ?? errorData;
   const messages = flattenApiError(source).filter(Boolean);
   return messages.length > 0 ? messages.join(" | ") : fallback;
 }
@@ -66,12 +77,6 @@ export function buildRegistrationFormData(
   payload: Record<string, string | File | null | undefined>,
   roleId: RegistrationRoleId,
 ): FormData {
-  const roleNameById: Record<RegistrationRoleId, string> = {
-    [USER_ROLE.HOSPITAL_ADMIN.id]: USER_ROLE.HOSPITAL_ADMIN.name,
-    [USER_ROLE.INDIVIDUAL_PATIENT.id]: USER_ROLE.INDIVIDUAL_PATIENT.name,
-    [USER_ROLE.HOSPITAL_PATIENT.id]: USER_ROLE.HOSPITAL_PATIENT.name,
-  };
-  const roleName = roleNameById[roleId];
   const data = new FormData();
 
   Object.entries(payload).forEach(([key, value]) => {
@@ -89,7 +94,7 @@ export function buildRegistrationFormData(
   }
 
   data.set("role_id", roleId);
-  data.set("role", roleName);
+  data.set("role", roleId);
 
   if (!data.get("country_id")) {
     data.set("country_id", "1");
@@ -98,49 +103,26 @@ export function buildRegistrationFormData(
   return data;
 }
 
-export async function loginUser(credentials: LoginCredentials): Promise<any> {
-  const response = await fetch('/api/external/user-login', {
-    method: 'POST',
+export async function loginUser(credentials: LoginCredentials): Promise<LoginResponse> {
+  const response = await apiFetch("/api/external/user-login", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(credentials),
   });
 
+  const responseData = await response.json().catch(() => ({}));
+
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(getApiErrorMessage(errorData, "Login failed"));
+    throw new Error(getApiErrorMessage(responseData, "Invalid username or password"));
   }
 
-  const userResponse = await response.json();
-
-  // Get tokens
-  const tokenResponse = await fetch('/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      email: credentials.username,
-      password: credentials.password
-    }),
-  });
-
-  if (!tokenResponse.ok) {
-    const errorData = await tokenResponse.json().catch(() => ({}));
-    throw new Error(getApiErrorMessage(errorData, "Failed to retrieve access tokens"));
-  }
-
-  const tokens = await tokenResponse.json();
-  
-  return {
-    ...userResponse,
-    tokens
-  };
+  return responseData as LoginResponse;
 } 
 
 export async function registerPatient(formData: FormData): Promise<any> {
-  const response = await fetch("/api/external/patient/create", {
+  const response = await apiFetch("/api/external/patient/create", {
     method: "POST",
     body: formData,
   });

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, Eye, EyeOff } from "lucide-react"
 import { buildRegistrationFormData, registerPatient, USER_ROLE } from "@/lib/auth-service"
+import { apiFetch } from "@/lib/backend-api"
 
 interface Hospital {
   id: string
@@ -55,7 +56,7 @@ export default function PatientRegisterPage() {
     const loadHospitals = async () => {
       setIsLoadingHospitals(true)
       try {
-        const response = await fetch("/api/external/hospitals")
+        const response = await apiFetch("/api/external/hospitals")
         const json = await response.json().catch(() => ({}))
 
         if (!response.ok) {

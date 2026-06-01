@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || "http://187.127.132.226:8000"
+const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || "http://187.127.132.226:9000"
 
 const nextConfig = {
   typescript: {
@@ -24,11 +24,7 @@ const nextConfig = {
       },
       {
         source: '/api/external/user-login',
-        destination: `${BACKEND_BASE_URL}/api/user-login`,
-      },
-      {
-        source: '/token',
-        destination: `${BACKEND_BASE_URL}/api/token`,
+        destination: `${BACKEND_BASE_URL}/api/user/login`,
       },
       {
         source: '/api/external/:path*',

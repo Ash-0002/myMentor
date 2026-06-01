@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import axios from "axios"
+import { apiClient } from "@/lib/api-client"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -100,16 +100,11 @@ export default function TestSelection({ onTestsChange }: { onTestsChange?: (test
   const [error, setError] = useState<string | null>(null)
   const [selectedTestDetail, setSelectedTestDetail] = useState<Test | null>(null)
 
-  const apiClient = axios.create({
-    baseURL: "/api",
-    timeout: 10000,
-  })
-
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         setError(null)
-        const response = await apiClient.get("/categories/", { timeout: 30000 })
+        const response = await apiClient.get("/api/categories/", { timeout: 30000 })
 
         if (response.data?.status === "success" && Array.isArray(response.data.data)) {
           const validCategories = response.data.data.filter((c: Category) => c.category !== "nan")
@@ -135,7 +130,7 @@ export default function TestSelection({ onTestsChange }: { onTestsChange?: (test
 
     setIsLoadingTests(true)
     try {
-      const response = await apiClient.get(`/tests/${categoryId}/`, { timeout: 30000 })
+      const response = await apiClient.get(`/api/tests/${categoryId}/`, { timeout: 30000 })
 
       if (response.data?.status === "success" && Array.isArray(response.data.data)) {
         setTests(response.data.data)

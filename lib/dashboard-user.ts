@@ -51,8 +51,14 @@ export function getDashboardUserType(user: DashboardUser): DashboardUserType {
 export function normalizeDashboardUser(value: unknown): DashboardUser | null {
   if (!value || typeof value !== "object") return null
   const raw = value as Record<string, unknown>
+  const roleDetail = raw.role_detail as Record<string, unknown> | undefined
+  const roleFromDetail = Number(roleDetail?.id)
   const roleCandidate = Number(raw.role)
-  const role = Number.isFinite(roleCandidate) ? roleCandidate : undefined
+  const role = Number.isFinite(roleFromDetail)
+    ? roleFromDetail
+    : Number.isFinite(roleCandidate)
+      ? roleCandidate
+      : undefined
 
   // New login response shape (patient login)
   if (raw.patient_detail && typeof raw.patient_detail === "object") {
@@ -89,7 +95,7 @@ export function normalizeDashboardUser(value: unknown): DashboardUser | null {
       hospital_address: String(detail.hospital_address ?? ""),
       doctor_name: String(detail.doctor_name ?? ""),
       country: (detail.country as string | number | undefined) ?? "",
-      role: Number(raw.role ?? 5),
+      role: role ?? 5,
     }
   }
 

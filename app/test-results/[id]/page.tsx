@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import axios from "axios"
+import { apiClient } from "@/lib/api-client"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -66,7 +66,7 @@ export default function TestResultDetailPage() {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await axios.post<{ data?: AssessmentReport; message?: string }>(
+        const response = await apiClient.post<{ data?: AssessmentReport; message?: string }>(
           "/api/external/assessment-report/create",
           { assessment_id: assessmentId },
         )

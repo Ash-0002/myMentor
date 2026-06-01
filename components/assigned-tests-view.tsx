@@ -4,68 +4,23 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Loader2, AlertCircle } from "lucide-react"
-import axios from "axios"
 import AssessmentCard from "@/components/results/AssessmentCard"
 import { isIndividualDashboardUser, normalizeDashboardUser } from "@/lib/dashboard-user"
-
-interface Assessment {
-  patient_id: string
-  assessment_id: string
-  assessment_status: string
-  test_name: string
-  test_duration: number
-  amount_paid: number
-  total_questions: number
-  test_id: number
-}
-
-interface AssessmentItem {
-  assessment_id: string
-  test_name: string
-  amount_paid: number
-  test_duration: number
-  total_questions: number
-  status: string
-  progressPercentage: number
-  test_id: number
-}
-
-const fetchAssignedTests = async (patientId: string): Promise<AssessmentItem[]> => {
-  try {
-    const response = await axios.get<{ message: string; data: Assessment[] }>(
-      `/api/external/patient/assessments?patient_id=${encodeURIComponent(patientId)}`,
-    )
-
-    if (response.data?.data && Array.isArray(response.data.data)) {
-      return response.data.data.map((assessment) => {
-        const normalizedStatus = (assessment.assessment_status || "").toLowerCase()
-        return {
-          assessment_id: assessment.assessment_id,
-          test_name: assessment.test_name,
-          amount_paid: assessment.amount_paid,
-          test_duration: assessment.test_duration,
-          total_questions: assessment.total_questions,
-          status: assessment.assessment_status,
-          progressPercentage: normalizedStatus === "completed" ? 100 : 0,
-          test_id: assessment.test_id,
-        }
-      })
-    }
-    return []
-  } catch (error) {
-    console.error("[v0] Error fetching assigned tests:", error)
-    return []
-  }
-}
+import {
+  fetchPatientAssessments,
+  getAssessmentProgress,
+  isPendingAssessment,
+  resolveTestIdForAssessment,
+  type PatientAssessment,
+} from "@/lib/patient-assessments"
 
 interface AssignedTestsViewProps {
-  onStartAssessment?: () => void
   patientId?: string
 }
 
 export default function AssignedTestsView({ patientId }: AssignedTestsViewProps) {
   const router = useRouter()
-  const [assessments, setAssessments] = useState<AssessmentItem[]>([])
+  const [assessments, setAssessments] = useState<PatientAssessment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [resolvedPatientId, setResolvedPatientId] = useState<string | undefined>(patientId)
 
@@ -95,12 +50,29 @@ export default function AssignedTestsView({ patientId }: AssignedTestsViewProps)
       }
 
       setIsLoading(true)
-      const tests = await fetchAssignedTests(resolvedPatientId)
-      setAssessments(tests)
-      setIsLoading(false)
+      try {
+        const data = await fetchPatientAssessments(resolvedPatientId)
+        setAssessments(data)
+      } catch (error) {
+        console.error("[v0] Error fetching assigned tests:", error)
+        setAssessments([])
+      } finally {
+        setIsLoading(false)
+      }
     }
     loadTests()
   }, [resolvedPatientId])
+
+  const pendingCount = assessments.filter(isPendingAssessment).length
+
+  const handleContinue = (assessment: PatientAssessment) => {
+    const testId = resolveTestIdForAssessment(assessment.test)
+    if (!testId) {
+      alert("Unable to start this assessment. Please complete payment for this test first.")
+      return
+    }
+    router.push(`/assessment/${testId}/${assessment.assessment_id}`)
+  }
 
   if (isLoading) {
     return (
@@ -116,14 +88,9 @@ export default function AssignedTestsView({ patientId }: AssignedTestsViewProps)
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="tenxt-2xl md:text-3xl font-bold text-foreground mb-2">My Assessments</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">My Assessments</h2>
         <p className="text-muted-foreground">
-          You have{" "}
-          {assessments.filter((t) => {
-            const status = (t.status || "").toLowerCase()
-            return status === "pending" || status === "in progress"
-          }).length}{" "}
-          assessment(s) waiting to be completed
+          You have {pendingCount} assessment(s) waiting to be completed
         </p>
       </div>
 
@@ -138,15 +105,15 @@ export default function AssignedTestsView({ patientId }: AssignedTestsViewProps)
           {assessments.map((item) => (
             <AssessmentCard
               key={item.assessment_id}
-              assessmentId={item.assessment_id}
-              title={item.test_name}
+              title={item.test}
               questions={item.total_questions}
-              duration={item.test_duration}
-              amountPaid={item.amount_paid}
-              status={item.status}
-              progressPercentage={item.progressPercentage}
-              onContinue={() => router.push(`/assessment/${item.test_id}/${item.assessment_id}`)}
-              onViewResults={() => router.push(`/dashboard?view=results&assessmentId=${encodeURIComponent(item.assessment_id)}`)}
+              completedQuestions={item.completed_questions}
+              status={item.assessment_status}
+              progressPercentage={getAssessmentProgress(item)}
+              onContinue={() => handleContinue(item)}
+              onViewResults={() =>
+                router.push(`/dashboard?view=results&assessmentId=${encodeURIComponent(item.assessment_id)}`)
+              }
             />
           ))}
         </div>

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { buildBackendApiUrl } from "@/lib/backend-api"
+import { buildBackendApiUrl, getBackendHeaders } from "@/lib/backend-api"
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -8,10 +8,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const response = await fetch(buildBackendApiUrl(`/tests/${id}`), {
       method: "GET",
       cache: "no-store",
-      headers: {
+      headers: getBackendHeaders({
         Accept: "application/json",
         "Content-Type": "application/json",
-      },
+      }),
     })
 
     const responseText = await response.text()
