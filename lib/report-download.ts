@@ -1,3 +1,5 @@
+import { apiClient } from "@/lib/api-client"
+
 export interface AssessmentReportChartData {
   sub_category: string
   sub_category_score: number
@@ -277,4 +279,23 @@ export async function downloadAssessmentReportFromData(assessmentId: string, rep
   const safeTestName = sanitizeFileName(report.test_name || "assessment")
   const safeAssessmentId = sanitizeFileName(assessmentId)
   pdf.save(`${safeTestName}-${safeAssessmentId}-report.pdf`)
+}
+
+export async function fetchAssessmentReport(assessmentId: string): Promise<AssessmentReport> {
+  const response = await apiClient.post<{ data?: AssessmentReport; message?: string }>(
+    "/api/external/assessment-report/create",
+    { assessment_id: assessmentId },
+  )
+
+  const reportData = response.data?.data
+  if (!reportData) {
+    throw new Error(response.data?.message || "Invalid report response")
+  }
+
+  return reportData
+}
+
+export async function downloadAssessmentReport(assessmentId: string): Promise<void> {
+  const report = await fetchAssessmentReport(assessmentId)
+  await downloadAssessmentReportFromData(assessmentId, report)
 }

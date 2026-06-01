@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import ReportHeader from "@/components/results/ReportHeader"
 import ChartSection from "@/components/results/ChartSection"
 import ResultsNavigation from "@/components/results/ResultsNavigation"
-import { downloadAssessmentReport } from "@/lib/report-download"
+import { downloadAssessmentReportFromData } from "@/lib/report-download"
 
 interface AssessmentReportChartData {
   sub_category: string
@@ -88,10 +88,10 @@ export default function TestResultDetailPage() {
   }, [assessmentId])
 
   const handleDownload = async () => {
-    if (!assessmentId) return
+    if (!assessmentId || !report) return
     setIsDownloading(true)
     try {
-      await downloadAssessmentReport(assessmentId)
+      await downloadAssessmentReportFromData(assessmentId, report)
     } catch (err) {
       console.error("[v0] Download report error:", err)
       alert("Failed to generate report PDF.")
