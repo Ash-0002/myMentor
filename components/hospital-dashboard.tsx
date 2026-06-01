@@ -1,12 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { LogOut, Home, Users, Calendar, Menu, X, ClipboardList, Award } from "lucide-react"
+import { LogOut, Home, Users, Calendar, Menu, X } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import PatientInfo from "./patient-info"
-import TestSelection from "./test-selection"
-import AssignedTestsView from "./assigned-tests-view"
 import TestResultsView from "./test-results-view"
+import PatientPortalShell from "@/components/dashboard/patient-portal-shell"
+import PatientDashboardHome from "@/components/dashboard/patient-dashboard-home"
+import PatientAssessmentsPage from "@/components/dashboard/patient-assessments-page"
+import ProfileCard from "@/components/dashboard/profile-card"
+import AnalyticsSection from "@/components/dashboard/analytics-section"
 import { Card } from "@/components/ui/card"
 import {
   DashboardUser,
@@ -15,18 +18,146 @@ import {
   isAdminDashboardUser,
   isIndividualDashboardUser,
   normalizeDashboardUser,
+  type IndividualDashboardUser,
 } from "@/lib/dashboard-user"
+import { computeDashboardStats } from "@/lib/dashboard-utils"
+import {
+  fetchPatientAssessments,
+  type PatientAssessment,
+} from "@/lib/patient-assessments"
+
+function AdminDashboard({
+  user,
+  activeNav,
+  onNavigate,
+  navItems,
+  sidebarOpen,
+  setSidebarOpen,
+  isMobile,
+  onLogout,
+}: {
+  user: DashboardUser
+  activeNav: string
+  onNavigate: (nav: string) => void
+  navItems: { icon: typeof Home; label: string; id: string }[]
+  sidebarOpen: boolean
+  setSidebarOpen: (v: boolean) => void
+  isMobile: boolean
+  onLogout: () => void
+}) {
+  const headerTitle =
+    isAdminDashboardUser(user) ? user.hospital_name : "MyMentor Dashboard"
+  const headerId = isAdminDashboardUser(user) ? user.hospital_id : "-"
+
+  return (
+    <div className="flex h-screen bg-background">
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-30 bg-black/50 md:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+      <aside
+        className={`fixed md:relative left-0 top-0 z-40 h-screen ${
+          sidebarOpen ? "w-64" : "-translate-x-full md:translate-x-0"
+        } md:w-64 border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-lg transition-all`}
+      >
+        <div className="flex h-full flex-col">
+          <div className="border-b border-sidebar-border p-6">
+            <div className="flex h-12 items-center justify-center rounded-lg bg-sidebar-primary">
+              <span className="text-2xl font-bold text-sidebar-primary-foreground">+</span>
+            </div>
+            <p className="mt-3 text-center text-sm font-semibold text-sidebar-primary">MediCare</p>
+          </div>
+          <nav className="flex-1 space-y-2 px-3 py-6">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  onNavigate(item.id)
+                  if (isMobile) setSidebarOpen(false)
+                }}
+                className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 transition-colors ${
+                  activeNav === item.id
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/10"
+                }`}
+              >
+                <item.icon className="h-5 w-5 shrink-0" />
+                <span className="text-sm font-medium">{item.label}</span>
+              </button>
+            ))}
+          </nav>
+          <div className="border-t border-sidebar-border p-3">
+            <button
+              onClick={onLogout}
+              className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10"
+            >
+              <LogOut className="h-5 w-5" />
+              <span className="text-sm font-medium">Logout</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+      <main className="flex flex-1 flex-col overflow-auto">
+        <header className="sticky top-0 z-10 border-b border-border bg-card px-4 py-4 shadow-sm md:px-6">
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="rounded-lg p-2 hover:bg-muted md:hidden"
+            >
+              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold">{headerTitle}</h1>
+              <p className="text-sm text-muted-foreground">Hospital Admin Dashboard · {headerId}</p>
+            </div>
+          </div>
+        </header>
+        <div className="flex-1 overflow-auto p-4 md:p-8">
+          {activeNav === "dashboard" && <PatientInfo user={user} userType="admin" />}
+          {activeNav === "patients" && (
+            <Card className="p-8 text-center">
+              <p className="text-muted-foreground">Patients — Coming Soon</p>
+            </Card>
+          )}
+          {activeNav === "appointments" && (
+            <Card className="p-8 text-center">
+              <p className="text-muted-foreground">Appointments — Coming Soon</p>
+            </Card>
+          )}
+        </div>
+      </main>
+    </div>
+  )
+}
+
+function PatientAnalyticsView({ user }: { user: IndividualDashboardUser }) {
+  const [assessments, setAssessments] = useState<PatientAssessment[]>([])
+
+  useEffect(() => {
+    fetchPatientAssessments(user.patient_id).then(setAssessments).catch(() => setAssessments([]))
+  }, [user.patient_id])
+
+  const stats = computeDashboardStats(assessments)
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900">Analytics</h2>
+        <p className="text-sm text-slate-500">Health and assessment insights</p>
+      </div>
+      <AnalyticsSection assessments={assessments} stats={stats} />
+    </div>
+  )
+}
 
 export default function HospitalDashboard() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [selectedTests, setSelectedTests] = useState<any[]>([])
   const [activeNav, setActiveNav] = useState("dashboard")
   const [isMobile, setIsMobile] = useState(false)
   const [user, setUser] = useState<DashboardUser | null>(null)
   const [userType, setUserType] = useState<DashboardUserType | null>(null)
-
-  const searchParams = useSearchParams()
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -37,9 +168,7 @@ export default function HospitalDashboard() {
 
   useEffect(() => {
     const view = searchParams.get("view")
-    if (view) {
-      setActiveNav(view)
-    }
+    if (view) setActiveNav(view)
   }, [searchParams])
 
   useEffect(() => {
@@ -48,15 +177,12 @@ export default function HospitalDashboard() {
       router.push("/login")
       return
     }
-
     try {
-      const parsed = JSON.parse(storedUser)
-      const normalized = normalizeDashboardUser(parsed)
+      const normalized = normalizeDashboardUser(JSON.parse(storedUser))
       if (!normalized) {
         router.push("/login")
         return
       }
-
       setUser(normalized)
       setUserType(getDashboardUserType(normalized))
     } catch {
@@ -64,166 +190,71 @@ export default function HospitalDashboard() {
     }
   }, [router])
 
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen)
-
   const handleNavigation = (nav: string) => {
     setActiveNav(nav)
-    if (isMobile) setSidebarOpen(false)
+    router.push(`/dashboard?view=${nav}`, { scroll: false })
   }
-
-  // const navigateToTestSelection = () => {
-  //   router.push("/test-selection")
-  // }
-
-  const closeSidebar = () => setSidebarOpen(false)
 
   const handleLogout = () => {
     localStorage.clear()
-    // Clear both cookies
     document.cookie = "auth_token=; path=/; max-age=0; SameSite=Strict"
     document.cookie = "session=; path=/; max-age=0; SameSite=Strict"
     router.push("/login")
   }
 
-  const navItems =
-    userType === "admin"
-      ? [
-          { icon: Home, label: "Dashboard", id: "dashboard" },
-          { icon: Users, label: "Patients", id: "patients" },
-          { icon: Calendar, label: "Appointments", id: "appointments" },
-        ]
-      : [
-          { icon: Home, label: "Dashboard", id: "dashboard" },
-          { icon: ClipboardList, label: "My Assessments", id: "assessments" },
-          { icon: Award, label: "Test Results", id: "results" },
-        ]
+  if (!user || !userType) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-600 border-t-transparent" />
+      </div>
+    )
+  }
 
-  const headerTitle =
-    userType === "admin" && user && isAdminDashboardUser(user) ? user.hospital_name : "MyMentor Dashboard"
-  const headerId =
-    userType === "admin" && user && isAdminDashboardUser(user)
-      ? user.hospital_id
-      : userType === "individual" && user && isIndividualDashboardUser(user)
-        ? user.patient_id
-        : "-"
-  const headerIdLabel = userType === "admin" ? "H" : "P"
-  const headerSubtitle =
-    userType === "admin" ? "Hospital Admin Dashboard" : "Patient Assessment Dashboard"
-  const patientId = userType === "individual" && user && isIndividualDashboardUser(user) ? user.patient_id : undefined
+  if (userType === "admin") {
+    const navItems = [
+      { icon: Home, label: "Dashboard", id: "dashboard" },
+      { icon: Users, label: "Patients", id: "patients" },
+      { icon: Calendar, label: "Appointments", id: "appointments" },
+    ]
+    return (
+      <AdminDashboard
+        user={user}
+        activeNav={activeNav}
+        onNavigate={handleNavigation}
+        navItems={navItems}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        isMobile={isMobile}
+        onLogout={handleLogout}
+      />
+    )
+  }
+
+  if (!isIndividualDashboardUser(user)) return null
+
+  const patient = user
 
   return (
-    <div className="flex h-screen bg-background">
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={closeSidebar} aria-hidden="true" />
+    <PatientPortalShell user={patient} activeNav={activeNav} onNavigate={handleNavigation}>
+      {activeNav === "dashboard" && (
+        <PatientDashboardHome user={patient} onNavigate={handleNavigation} />
       )}
-
-      {/* Sidebar */}
-      <aside
-        className={`fixed md:relative left-0 top-0 h-screen z-40 ${
-          sidebarOpen ? "w-64" : "-translate-x-full md:translate-x-0"
-        } md:w-64 bg-sidebar text-sidebar-foreground transition-all duration-300 border-r border-sidebar-border shadow-lg`}
-      >
-        <div className="h-full flex flex-col">
-          {/* Logo Section */}
-          <div className="p-6 border-b border-sidebar-border">
-            <div className="flex items-center justify-center h-12 bg-sidebar-primary rounded-lg">
-              <span className="text-2xl font-bold text-sidebar-primary-foreground">+</span>
-            </div>
-            <p className="text-sm font-semibold text-sidebar-primary mt-3 text-center">MediCare</p>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 px-3 py-6 space-y-2">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => handleNavigation(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeNav === item.id
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/10"
-                }`}
-              >
-                <item.icon className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium">{item.label}</span>
-              </button>
-            ))}
-          </nav>
-
-          {/* Logout */}
-          <div className="p-3 border-t border-sidebar-border">
-            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent/10 transition-colors">
-              <LogOut className="w-5 h-5 flex-shrink-0" />
-              <span className="text-sm font-medium">Logout</span>
-            </button>
-          </div>
+      {activeNav === "assessments" && (
+        <PatientAssessmentsPage
+          user={patient}
+          onViewResults={(id) =>
+            router.push(`/dashboard?view=results&assessmentId=${encodeURIComponent(id)}`)
+          }
+        />
+      )}
+      {(activeNav === "results" || activeNav === "reports") && <TestResultsView />}
+      {activeNav === "analytics" && <PatientAnalyticsView user={patient} />}
+      {activeNav === "profile" && (
+        <div className="mx-auto max-w-2xl space-y-4">
+          <h2 className="text-2xl font-bold text-slate-900">Profile Settings</h2>
+          <ProfileCard user={patient} />
         </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto flex flex-col">
-        {/* Header */}
-        <header className="sticky top-0 bg-card border-b border-border px-4 md:px-6 py-4 md:py-6 shadow-sm z-10">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 min-w-0">
-              <button
-                onClick={toggleSidebar}
-                className="md:hidden p-2 hover:bg-muted rounded-lg transition-colors flex-shrink-0"
-                aria-label="Toggle sidebar"
-              >
-                {sidebarOpen ? <X className="w-5 h-5 text-foreground" /> : <Menu className="w-5 h-5 text-foreground" />}
-              </button>
-              <div className="min-w-0">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="text-2xl md:text-3xl font-bold text-foreground text-balance">{headerTitle}</h1>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-lg border border-primary/20">
-                    <div className="w-6 h-6 bg-primary/20 rounded flex items-center justify-center">
-                      <span className="text-xs font-bold text-primary">{headerIdLabel}</span>
-                    </div>
-                    <span className="text-sm font-bold text-primary font-mono">{headerId}</span>
-                  </div>
-                </div>
-                <p className="text-muted-foreground text-xs md:text-sm mt-1">{headerSubtitle}</p>
-              </div>
-            </div>
-            {/* <div className="flex items-center gap-4 flex-shrink-0">
-              <ThemeSelector />
-              <div className="text-right">
-                <p className="text-sm font-medium text-foreground">10:30 AM</p>
-                <p className="text-sm text-muted-foreground">19/08/2023</p>
-              </div>
-            </div> */}
-          </div>
-        </header>
-
-        {/* Content Area */}
-        <div className="flex-1 overflow-auto p-4 md:p-8">
-          {activeNav === "dashboard" && (
-            <div className="space-y-6">
-              <PatientInfo user={user} userType={userType} />
-              {userType === "individual" && <TestSelection onTestsChange={setSelectedTests} />}
-            </div>
-          )}
-
-          {activeNav === "assessments" && (
-            <AssignedTestsView patientId={patientId} onStartAssessment={() => handleNavigation("dashboard")} />
-          )}
-
-          {activeNav === "results" && <TestResultsView />}
-
-          {activeNav === "patients" && (
-            <Card className="p-8 border border-border text-center">
-              <p className="text-muted-foreground">Patients Content - Coming Soon</p>
-            </Card>
-          )}
-
-          {activeNav === "appointments" && (
-            <Card className="p-8 border border-border text-center">
-              <p className="text-muted-foreground">Appointments Content - Coming Soon</p>
-            </Card>
-          )}
-        </div>
-      </main>
-    </div>
+      )}
+    </PatientPortalShell>
   )
 }

@@ -25,6 +25,7 @@ export interface IndividualDashboardUser {
   email: string
   address: string
   role: number
+  role_name?: string
   country: string | number
   hospital: string | null
 }
@@ -59,6 +60,7 @@ export function normalizeDashboardUser(value: unknown): DashboardUser | null {
     : Number.isFinite(roleCandidate)
       ? roleCandidate
       : undefined
+  const roleName = roleDetail?.name ? String(roleDetail.name) : undefined
 
   // New login response shape (patient login)
   if (raw.patient_detail && typeof raw.patient_detail === "object") {
@@ -74,6 +76,7 @@ export function normalizeDashboardUser(value: unknown): DashboardUser | null {
       email: String(detail.email ?? ""),
       address: String(detail.address ?? ""),
       role: Number(detail.role ?? role ?? 3),
+      role_name: roleName ?? (raw.role_name ? String(raw.role_name) : "Individual Patient"),
       country: (detail.country as string | number | undefined) ?? "",
       hospital: detail.hospital ? String(detail.hospital) : null,
     }
@@ -129,6 +132,7 @@ export function normalizeDashboardUser(value: unknown): DashboardUser | null {
       email: String(raw.email ?? ""),
       address: String(raw.address ?? ""),
       role: Number(raw.role ?? 3),
+      role_name: raw.role_name ? String(raw.role_name) : "Individual Patient",
       country: (raw.country as string | number | undefined) ?? "",
       hospital: raw.hospital ? String(raw.hospital) : null,
     }
