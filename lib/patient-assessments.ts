@@ -1,16 +1,15 @@
 import { apiClient } from "@/lib/api-client"
 
-/** Shape returned in `data[]` from GET /api/user/details */
 export interface PatientAssessment {
-  user_id: string
-  name: string
+  patient_id: string
   assessment_id: string
   assessment_status: string
   completed_questions: number
-  email: string
+  test_id?: number
   test: string
+  test_duration?: number
+  amount_paid?: number
   total_questions: number
-  username: string
 }
 
 export function getAssessmentProgress(assessment: PatientAssessment): number {
@@ -28,7 +27,6 @@ export function isPendingAssessment(assessment: PatientAssessment): boolean {
   return status === "pending" || status === "in progress" || status === "in_progress"
 }
 
-/** Match test name from user/details to id stored at payment (paidTests in localStorage). */
 export function resolveTestIdForAssessment(testName: string): number | null {
   if (typeof window === "undefined") return null
 
@@ -60,6 +58,18 @@ export async function fetchPatientAssessments(patientId: string): Promise<Patien
     patient_id: patientId,
   })
 
-  const data = response.data?.data
-  return Array.isArray(data) ? (data as PatientAssessment[]) : []
+  const rows = response.data?.data
+  if (!Array.isArray(rows)) return []
+
+  return rows.map((row: Record<string, unknown>) => ({
+    patient_id: String(row.user_id ?? row.patient_id ?? ""),
+    assessment_id: String(row.assessment_id ?? ""),
+    assessment_status: String(row.assessment_status ?? ""),
+    completed_questions: Number(row.completed_questions ?? 0),
+    test_id: row.test_id ? Number(row.test_id) : undefined,
+    test: String(row.test_name ?? row.test ?? ""),
+    test_duration: row.test_duration ? Number(row.test_duration) : undefined,
+    amount_paid: row.amount_paid ? Number(row.amount_paid) : undefined,
+    total_questions: Number(row.total_questions ?? 0),
+  }))
 }

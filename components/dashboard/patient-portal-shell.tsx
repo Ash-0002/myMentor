@@ -2,10 +2,8 @@
 
 import { useState, useEffect, ReactNode } from "react"
 import {
-  BarChart3,
   Bell,
   ClipboardList,
-  CreditCard,
   FileText,
   Home,
   LogOut,
@@ -20,9 +18,6 @@ const navItems = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "assessments", label: "My Assessments", icon: ClipboardList },
   { id: "results", label: "Test Results", icon: FileText },
-  { id: "reports", label: "Reports", icon: FileText },
-  { id: "payment", label: "Payment History", icon: CreditCard },
-  { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "profile", label: "Profile Settings", icon: Settings },
 ]
 
@@ -51,12 +46,7 @@ export default function PatientPortalShell({
   }, [])
 
   const handleNav = (id: string) => {
-    if (id === "payment") {
-      router.push("/billing")
-      if (isMobile) setSidebarOpen(false)
-      return
-    }
-    onNavigate(id === "reports" ? "results" : id)
+    onNavigate(id)
     if (isMobile) setSidebarOpen(false)
   }
 
@@ -68,8 +58,6 @@ export default function PatientPortalShell({
   }
 
   const firstName = user.first_name || "Patient"
-  const resolvedNav = activeNav === "results" ? "results" : activeNav
-
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/30 to-fuchsia-50/20">
       {sidebarOpen && (
@@ -95,8 +83,7 @@ export default function PatientPortalShell({
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {navItems.map((item) => {
-            const isActive =
-              resolvedNav === item.id || (item.id === "reports" && resolvedNav === "results")
+            const isActive = activeNav === item.id
             return (
               <button
                 key={item.id}

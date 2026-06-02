@@ -66,12 +66,13 @@ export default function AssignedTestsView({ patientId }: AssignedTestsViewProps)
   const pendingCount = assessments.filter(isPendingAssessment).length
 
   const handleContinue = (assessment: PatientAssessment) => {
-    const testId = resolveTestIdForAssessment(assessment.test)
+    const testId = assessment.test_id ?? resolveTestIdForAssessment(assessment.test)
     if (!testId) {
       alert("Unable to start this assessment. Please complete payment for this test first.")
       return
     }
-    router.push(`/assessment/${testId}/${assessment.assessment_id}`)
+    const duration = assessment.test_duration ?? 30
+    router.push(`/assessment/${testId}/${assessment.assessment_id}?duration=${duration}`)
   }
 
   if (isLoading) {

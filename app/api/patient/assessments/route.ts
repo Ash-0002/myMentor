@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
     const response = await axios.request({
       method: "GET",
-      url: buildBackendApiUrl("/user/details"),
+      url: buildBackendApiUrl("/patient/assessments"),
       headers: getBackendHeaders({ "Content-Type": "application/json" }),
       data: { patient_id },
     })
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: error instanceof Error ? error.message : "Failed to fetch user details",
+        message: error instanceof Error ? error.message : "Failed to fetch patient assessments",
       },
       { status: 500 },
     )

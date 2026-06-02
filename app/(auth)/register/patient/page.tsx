@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, Eye, EyeOff } from "lucide-react"
-import { buildRegistrationFormData, registerPatient, USER_ROLE } from "@/lib/auth-service"
+import { registerPatientJson, USER_ROLE } from "@/lib/auth-service"
 import { apiFetch } from "@/lib/backend-api"
 
 interface Hospital {
@@ -111,13 +111,24 @@ export default function PatientRegisterPage() {
     }
 
     try {
-      const roleId = patientType === "hospital patient" ? USER_ROLE.HOSPITAL_PATIENT.id : USER_ROLE.INDIVIDUAL_PATIENT.id
-      const payload = {
-        ...formData,
+      const roleId = patientType === "hospital patient" ? Number(USER_ROLE.HOSPITAL_PATIENT.id) : 1
+      const response = await registerPatientJson({
+        first_name: formData.first_name.trim(),
+        last_name: formData.last_name.trim(),
+        username: formData.username.trim(),
+        role_id: roleId,
+        gender: formData.gender
+          ? `${formData.gender.charAt(0).toUpperCase()}${formData.gender.slice(1).toLowerCase()}`
+          : "",
+        age: Number(formData.age),
+        country_id: 1,
+        phone: formData.phone.trim(),
+        email: formData.email.trim(),
+        address: formData.address.trim(),
+        password: formData.password,
+        confirm_password: formData.confirm_password,
         ...(patientType === "hospital patient" ? { hospital_id: selectedHospitalId } : {}),
-      }
-      const data = buildRegistrationFormData(payload, roleId)
-      const response = await registerPatient(data)
+      })
 
       if (response.message?.toLowerCase().includes("success")) {
         router.push("/login")

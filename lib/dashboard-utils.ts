@@ -53,24 +53,6 @@ export function computeDashboardStats(assessments: PatientAssessment[]): Dashboa
   return { total, completed, pending, inProgress, wellnessScore }
 }
 
-export function formatDisplayDate(value?: string | null): string {
-  if (!value) return "—"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "—"
-  return date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
-}
-
-export function getPaymentDates(): { purchased: string; expiry: string } {
-  const paymentDate = typeof window !== "undefined" ? localStorage.getItem("paymentDate") : null
-  const base = paymentDate ? new Date(paymentDate) : new Date()
-  const expiry = new Date(base)
-  expiry.setDate(expiry.getDate() + 30)
-  return {
-    purchased: formatDisplayDate(base.toISOString()),
-    expiry: formatDisplayDate(expiry.toISOString()),
-  }
-}
-
 export function estimateDurationMinutes(totalQuestions: number): number {
   return Math.max(10, Math.round(totalQuestions * 0.75))
 }

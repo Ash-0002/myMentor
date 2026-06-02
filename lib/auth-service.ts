@@ -5,6 +5,22 @@ export interface LoginCredentials {
   password: string;
 }
 
+export interface PatientRegistrationPayload {
+  first_name: string;
+  last_name?: string;
+  username: string;
+  role_id: number;
+  gender: string;
+  age: number;
+  country_id: number;
+  phone: string;
+  email: string;
+  address?: string;
+  password: string;
+  confirm_password: string;
+  hospital_id?: string;
+}
+
 export interface LoginResponse {
   status: string;
   message: string;
@@ -104,7 +120,7 @@ export function buildRegistrationFormData(
 }
 
 export async function loginUser(credentials: LoginCredentials): Promise<LoginResponse> {
-  const response = await apiFetch("/api/external/user-login", {
+  const response = await fetch("/api/external/user-login", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -125,6 +141,23 @@ export async function registerPatient(formData: FormData): Promise<any> {
   const response = await apiFetch("/api/external/patient/create", {
     method: "POST",
     body: formData,
+  });
+
+  const responseData = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(responseData, "Registration failed"));
+  }
+
+  return responseData;
+}
+
+export async function registerPatientJson(payload: PatientRegistrationPayload): Promise<any> {
+  const response = await apiFetch("/api/external/patient/create", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
   });
 
   const responseData = await response.json().catch(() => ({}));

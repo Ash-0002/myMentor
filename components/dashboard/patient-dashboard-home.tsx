@@ -7,12 +7,10 @@ import { Loader2, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import StatsCards from "@/components/dashboard/stats-cards"
 import AssessmentPremiumCard from "@/components/dashboard/assessment-premium-card"
-import AnalyticsSection from "@/components/dashboard/analytics-section"
-import RecentActivity from "@/components/dashboard/recent-activity"
 import ProfileCard from "@/components/dashboard/profile-card"
 import TestSelection from "@/components/test-selection"
 import type { IndividualDashboardUser } from "@/lib/dashboard-user"
-import { computeDashboardStats, getPaymentDates } from "@/lib/dashboard-utils"
+import { computeDashboardStats } from "@/lib/dashboard-utils"
 import {
   fetchPatientAssessments,
   resolveTestIdForAssessment,
@@ -28,7 +26,6 @@ export default function PatientDashboardHome({ user, onNavigate }: PatientDashbo
   const router = useRouter()
   const [assessments, setAssessments] = useState<PatientAssessment[]>([])
   const [loading, setLoading] = useState(true)
-  const { purchased, expiry } = getPaymentDates()
 
   useEffect(() => {
     const load = async () => {
@@ -48,12 +45,13 @@ export default function PatientDashboardHome({ user, onNavigate }: PatientDashbo
   const stats = computeDashboardStats(assessments)
 
   const handleContinue = (assessment: PatientAssessment) => {
-    const testId = resolveTestIdForAssessment(assessment.test)
+    const testId = assessment.test_id ?? resolveTestIdForAssessment(assessment.test)
     if (!testId) {
       alert("Unable to start this assessment. Please complete payment for this test first.")
       return
     }
-    router.push(`/assessment/${testId}/${assessment.assessment_id}`)
+    const duration = assessment.test_duration ?? 30
+    router.push(`/assessment/${testId}/${assessment.assessment_id}?duration=${duration}`)
   }
 
   return (
@@ -89,8 +87,6 @@ export default function PatientDashboardHome({ user, onNavigate }: PatientDashbo
               <AssessmentPremiumCard
                 key={item.assessment_id}
                 assessment={item}
-                purchasedLabel={purchased}
-                expiryLabel={expiry}
                 onContinue={() => handleContinue(item)}
                 onViewResults={() => {
                   router.push(
@@ -103,14 +99,7 @@ export default function PatientDashboardHome({ user, onNavigate }: PatientDashbo
         )}
       </section>
 
-      <AnalyticsSection assessments={assessments} stats={stats} />
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <ProfileCard user={user} />
-        </div>
-        <RecentActivity assessments={assessments} />
-      </div>
+      <ProfileCard user={user} />
 
       <section className="rounded-2xl border border-white/70 bg-white/80 p-6 shadow-sm backdrop-blur-sm">
         <div className="mb-4 flex items-center gap-2">
@@ -119,7 +108,7 @@ export default function PatientDashboardHome({ user, onNavigate }: PatientDashbo
         </div>
         <TestSelection />
         <div className="mt-4 flex justify-end">
-          <Button asChild className="rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600">
+          <Button asChild className="rounded-xl bg-linear-to-r from-violet-600 to-fuchsia-600">
             <Link href="/billing">Proceed to billing</Link>
           </Button>
         </div>

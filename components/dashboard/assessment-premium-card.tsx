@@ -20,16 +20,12 @@ const statusStyles: Record<DisplayAssessmentStatus, string> = {
 
 interface AssessmentPremiumCardProps {
   assessment: PatientAssessment
-  purchasedLabel: string
-  expiryLabel: string
   onContinue: () => void
   onViewResults?: () => void
 }
 
 export default function AssessmentPremiumCard({
   assessment,
-  purchasedLabel,
-  expiryLabel,
   onContinue,
   onViewResults,
 }: AssessmentPremiumCardProps) {
@@ -69,18 +65,7 @@ export default function AssessmentPremiumCard({
         </p>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
-        <div className="rounded-lg bg-slate-50 px-3 py-2">
-          <p className="text-slate-400">Purchased</p>
-          <p className="font-medium text-slate-700">{purchasedLabel}</p>
-        </div>
-        <div className="rounded-lg bg-slate-50 px-3 py-2">
-          <p className="text-slate-400">Expiry</p>
-          <p className="font-medium text-slate-700">{expiryLabel}</p>
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+      <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
         <Clock className="h-3.5 w-3.5" />
         <span>Est. {duration} min</span>
       </div>

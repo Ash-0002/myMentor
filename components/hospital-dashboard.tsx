@@ -9,7 +9,6 @@ import PatientPortalShell from "@/components/dashboard/patient-portal-shell"
 import PatientDashboardHome from "@/components/dashboard/patient-dashboard-home"
 import PatientAssessmentsPage from "@/components/dashboard/patient-assessments-page"
 import ProfileCard from "@/components/dashboard/profile-card"
-import AnalyticsSection from "@/components/dashboard/analytics-section"
 import { Card } from "@/components/ui/card"
 import {
   DashboardUser,
@@ -18,13 +17,7 @@ import {
   isAdminDashboardUser,
   isIndividualDashboardUser,
   normalizeDashboardUser,
-  type IndividualDashboardUser,
 } from "@/lib/dashboard-user"
-import { computeDashboardStats } from "@/lib/dashboard-utils"
-import {
-  fetchPatientAssessments,
-  type PatientAssessment,
-} from "@/lib/patient-assessments"
 
 function AdminDashboard({
   user,
@@ -130,26 +123,6 @@ function AdminDashboard({
   )
 }
 
-function PatientAnalyticsView({ user }: { user: IndividualDashboardUser }) {
-  const [assessments, setAssessments] = useState<PatientAssessment[]>([])
-
-  useEffect(() => {
-    fetchPatientAssessments(user.patient_id).then(setAssessments).catch(() => setAssessments([]))
-  }, [user.patient_id])
-
-  const stats = computeDashboardStats(assessments)
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Analytics</h2>
-        <p className="text-sm text-slate-500">Health and assessment insights</p>
-      </div>
-      <AnalyticsSection assessments={assessments} stats={stats} />
-    </div>
-  )
-}
-
 export default function HospitalDashboard() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -247,8 +220,7 @@ export default function HospitalDashboard() {
           }
         />
       )}
-      {(activeNav === "results" || activeNav === "reports") && <TestResultsView />}
-      {activeNav === "analytics" && <PatientAnalyticsView user={patient} />}
+      {activeNav === "results" && <TestResultsView />}
       {activeNav === "profile" && (
         <div className="mx-auto max-w-2xl space-y-4">
           <h2 className="text-2xl font-bold text-slate-900">Profile Settings</h2>

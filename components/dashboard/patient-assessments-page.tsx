@@ -17,7 +17,6 @@ import type { IndividualDashboardUser } from "@/lib/dashboard-user"
 import {
   computeDashboardStats,
   getDisplayStatus,
-  getPaymentDates,
   inferCategory,
 } from "@/lib/dashboard-utils"
 import {
@@ -39,7 +38,6 @@ export default function PatientAssessmentsPage({ user, onViewResults }: PatientA
   const [statusFilter, setStatusFilter] = useState("all")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [sortBy, setSortBy] = useState("progress-desc")
-  const { purchased, expiry } = getPaymentDates()
 
   useEffect(() => {
     const load = async () => {
@@ -90,12 +88,13 @@ export default function PatientAssessmentsPage({ user, onViewResults }: PatientA
   )
 
   const handleContinue = (assessment: PatientAssessment) => {
-    const testId = resolveTestIdForAssessment(assessment.test)
+    const testId = assessment.test_id ?? resolveTestIdForAssessment(assessment.test)
     if (!testId) {
       alert("Unable to start this assessment. Please complete payment for this test first.")
       return
     }
-    router.push(`/assessment/${testId}/${assessment.assessment_id}`)
+    const duration = assessment.test_duration ?? 30
+    router.push(`/assessment/${testId}/${assessment.assessment_id}?duration=${duration}`)
   }
 
   return (
@@ -166,8 +165,6 @@ export default function PatientAssessmentsPage({ user, onViewResults }: PatientA
             <AssessmentPremiumCard
               key={item.assessment_id}
               assessment={item}
-              purchasedLabel={purchased}
-              expiryLabel={expiry}
               onContinue={() => handleContinue(item)}
               onViewResults={() => onViewResults(item.assessment_id)}
             />
