@@ -2,13 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Loader2, ShoppingBag } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import StatsCards from "@/components/dashboard/stats-cards"
 import AssessmentPremiumCard from "@/components/dashboard/assessment-premium-card"
 import ProfileCard from "@/components/dashboard/profile-card"
-import TestSelection from "@/components/test-selection"
 import type { IndividualDashboardUser } from "@/lib/dashboard-user"
 import { computeDashboardStats } from "@/lib/dashboard-utils"
 import {
@@ -100,19 +98,6 @@ export default function PatientDashboardHome({ user, onNavigate }: PatientDashbo
       </section>
 
       <ProfileCard user={user} />
-
-      <section className="rounded-2xl border border-white/70 bg-white/80 p-6 shadow-sm backdrop-blur-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <ShoppingBag className="h-5 w-5 text-violet-600" />
-          <h2 className="text-lg font-bold text-slate-900">Browse & Purchase Tests</h2>
-        </div>
-        <TestSelection />
-        <div className="mt-4 flex justify-end">
-          <Button asChild className="rounded-xl bg-linear-to-r from-violet-600 to-fuchsia-600">
-            <Link href="/billing">Proceed to billing</Link>
-          </Button>
-        </div>
-      </section>
     </div>
   )
 }

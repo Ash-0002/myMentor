@@ -8,6 +8,7 @@ import TestResultsView from "./test-results-view"
 import PatientPortalShell from "@/components/dashboard/patient-portal-shell"
 import PatientDashboardHome from "@/components/dashboard/patient-dashboard-home"
 import PatientAssessmentsPage from "@/components/dashboard/patient-assessments-page"
+import PatientBillingView from "@/components/dashboard/patient-billing-view"
 import ProfileCard from "@/components/dashboard/profile-card"
 import { Card } from "@/components/ui/card"
 import {
@@ -220,6 +221,7 @@ export default function HospitalDashboard() {
           }
         />
       )}
+      {activeNav === "billing" && <PatientBillingView />}
       {activeNav === "results" && <TestResultsView />}
       {activeNav === "profile" && (
         <div className="mx-auto max-w-2xl space-y-4">

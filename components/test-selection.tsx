@@ -89,7 +89,13 @@ function TestDescriptionModal({ test, onClose }: TestDescriptionModalProps) {
   )
 }
 
-export default function TestSelection({ onTestsChange }: { onTestsChange?: (tests: Test[]) => void }) {
+export default function TestSelection({
+  onTestsChange,
+  showProceedButton = true,
+}: {
+  onTestsChange?: (tests: Test[]) => void
+  showProceedButton?: boolean
+}) {
   const router = useRouter()
   const [selectedTests, setSelectedTests] = useState<Test[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -99,6 +105,20 @@ export default function TestSelection({ onTestsChange }: { onTestsChange?: (test
   const [isLoadingTests, setIsLoadingTests] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedTestDetail, setSelectedTestDetail] = useState<Test | null>(null)
+
+  useEffect(() => {
+    const stored = localStorage.getItem("selectedTests")
+    if (!stored) return
+    try {
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed)) {
+        setSelectedTests(parsed)
+        onTestsChange?.(parsed)
+      }
+    } catch {
+      // ignore malformed local storage data
+    }
+  }, [onTestsChange])
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -151,6 +171,7 @@ export default function TestSelection({ onTestsChange }: { onTestsChange?: (test
     setSelectedTests((prev) => {
       const isSelected = prev.some((t) => t.id === test.id)
       const updated = isSelected ? prev.filter((t) => t.id !== test.id) : [...prev, test]
+      localStorage.setItem("selectedTests", JSON.stringify(updated))
       onTestsChange?.(updated)
       return updated
     })
@@ -162,7 +183,7 @@ export default function TestSelection({ onTestsChange }: { onTestsChange?: (test
   const handleProceedToBilling = () => {
     localStorage.setItem("selectedTests", JSON.stringify(selectedTests))
     localStorage.setItem("paymentAmount", totalCost.toString())
-    router.push("/billing")
+    router.push("/dashboard?view=billing")
   }
 
   return (
@@ -176,7 +197,7 @@ export default function TestSelection({ onTestsChange }: { onTestsChange?: (test
       <div className="space-y-6">
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold text-red-900">Error</p>
               <p className="text-sm text-red-700">{error}</p>
@@ -228,14 +249,14 @@ export default function TestSelection({ onTestsChange }: { onTestsChange?: (test
                       type="checkbox"
                       checked={selectedTests.some((t) => t.id === test.id)}
                       onChange={() => toggleTest(test)}
-                      className="w-4 h-4 rounded border-input text-primary cursor-pointer mt-1 flex-shrink-0"
+                      className="w-4 h-4 rounded border-input text-primary cursor-pointer mt-1 shrink-0"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start gap-2 mb-1">
                         <p className="font-semibold text-sm text-foreground">{test.evaluation_name}</p>
                         <button
                           onClick={() => setSelectedTestDetail(test)}
-                          className="text-primary hover:text-primary/80 transition-colors flex-shrink-0"
+                          className="text-primary hover:text-primary/80 transition-colors shrink-0"
                           title="View test details"
                         >
                           <Info className="w-4 h-4" />
@@ -243,7 +264,7 @@ export default function TestSelection({ onTestsChange }: { onTestsChange?: (test
                       </div>
                       <p className="text-xs text-muted-foreground truncate">{test.evaluation_fullname}</p>
                     </div>
-                    <div className="flex flex-col items-end flex-shrink-0 text-sm">
+                    <div className="flex flex-col items-end shrink-0 text-sm">
                       <p className="font-bold text-primary">₹{test.evaluation_cost.toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground">{test.evaluation_time}m</p>
                     </div>
@@ -269,7 +290,7 @@ export default function TestSelection({ onTestsChange }: { onTestsChange?: (test
                 <Badge
                   key={test.id}
                   variant="default"
-                  className="bg-primary text-primary-foreground text-xs py-1 px-2 cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1"
+                className="bg-primary text-primary-foreground text-xs py-1 px-2 cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1 shrink-0"
                   onClick={() => toggleTest(test)}
                 >
                   {test.evaluation_name}
@@ -281,7 +302,7 @@ export default function TestSelection({ onTestsChange }: { onTestsChange?: (test
         )}
 
         {/* Action Button */}
-        {selectedCategory && (
+        {showProceedButton && selectedCategory && (
           <Button
             onClick={handleProceedToBilling}
             disabled={selectedTests.length === 0}

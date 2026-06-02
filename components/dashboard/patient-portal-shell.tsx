@@ -8,6 +8,7 @@ import {
   Home,
   LogOut,
   Menu,
+  ShoppingBag,
   Settings,
   X,
 } from "lucide-react"
@@ -17,6 +18,7 @@ import type { IndividualDashboardUser } from "@/lib/dashboard-user"
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "assessments", label: "My Assessments", icon: ClipboardList },
+  { id: "billing", label: "Browse & Purchase", icon: ShoppingBag },
   { id: "results", label: "Test Results", icon: FileText },
   { id: "profile", label: "Profile Settings", icon: Settings },
 ]
@@ -59,19 +61,19 @@ export default function PatientPortalShell({
 
   const firstName = user.first_name || "Patient"
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/30 to-fuchsia-50/20">
+    <div className="flex min-h-screen bg-linear-to-br from-slate-50 via-violet-50/30 to-fuchsia-50/20">
       {sidebarOpen && (
         <div className="fixed inset-0 z-30 bg-slate-900/60 backdrop-blur-sm md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       <aside
-        className={`fixed md:sticky top-0 z-40 flex h-screen w-64 flex-col border-r border-slate-800/50 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-200 shadow-2xl transition-transform duration-300 ${
+        className={`fixed md:sticky top-0 z-40 flex h-screen w-64 flex-col border-r border-slate-800/50 bg-linear-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-200 shadow-2xl transition-transform duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
         <div className="border-b border-slate-800 p-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 font-bold text-white shadow-lg shadow-violet-500/40">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-fuchsia-500 font-bold text-white shadow-lg shadow-violet-500/40">
               +
             </div>
             <div>
@@ -90,7 +92,7 @@ export default function PatientPortalShell({
                 onClick={() => handleNav(item.id)}
                 className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
                   isActive
-                    ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/30"
+                    ? "bg-linear-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/30"
                     : "text-slate-400 hover:bg-slate-800/80 hover:text-white"
                 }`}
               >
@@ -146,7 +148,7 @@ export default function PatientPortalShell({
               <div className="hidden text-right sm:block">
                 <p className="text-xs font-medium text-slate-500">{user.role_name || "Individual Patient"}</p>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-bold text-white shadow-md">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-fuchsia-500 text-sm font-bold text-white shadow-md">
                 {firstName[0]?.toUpperCase()}
               </div>
             </div>
