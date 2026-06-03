@@ -1,36 +1,17 @@
 import { apiClient } from "@/lib/api-client"
+import {
+  formatDescriptorText,
+  getPatientDisplayName,
+  normalizeAssessmentReport,
+  type AssessmentReport,
+  type AssessmentReportChartData,
+} from "@/lib/assessment-report"
 
-export interface AssessmentReportChartData {
-  sub_category: string
-  sub_category_score: number
-  sub_category_descriptor?: Array<{
-    test_descriptor_id: number
-    test_descriptor: string
-  }>
-}
-
-export interface AssessmentReport {
-  patient_data: {
-    patient_id: string
-    first_name: string
-    last_name: string
-    username: string
-    role: number
-  }
-  test_name: string
-  overall_score: number
-  interpretation?: {
-    advice?: string
-    result?: string
-    symptoms?: {
-      mental?: string
-      physical?: string
-      conditions_linked?: string
-    }
-  }
-  test_charts?: string
-  test_chart_data?: AssessmentReportChartData[]
-}
+export type {
+  AssessmentReport,
+  AssessmentReportChartData,
+  AssessmentReportSubCategoryResult,
+} from "@/lib/assessment-report"
 
 const CHART_COLORS = ["#2563eb", "#14b8a6", "#8b5cf6", "#f59e0b", "#ef4444", "#22c55e"]
 
@@ -156,7 +137,7 @@ export async function downloadAssessmentReportFromData(assessmentId: string, rep
   let y = margin
 
   const addWrappedText = (label: string, value?: string, fontSize = 11) => {
-    if (!value) return
+    if (!value?.trim()) return
     pdf.setFont("helvetica", "bold")
     pdf.setFontSize(fontSize)
     pdf.text(label, margin, y)
@@ -194,12 +175,11 @@ export async function downloadAssessmentReportFromData(assessmentId: string, rep
 
   pdf.setFont("helvetica", "normal")
   pdf.setFontSize(11)
-  const fullName = `${report.patient_data.first_name || ""} ${report.patient_data.last_name || ""}`.trim() || "N/A"
-  pdf.text(`Name: ${fullName}`, margin, y)
+  pdf.text(`Name: ${getPatientDisplayName(report)}`, margin, y)
   y += 15
-  pdf.text(`Patient ID: ${report.patient_data.patient_id || "N/A"}`, margin, y)
+  pdf.text(`Patient ID: ${report.patient_data?.patient_id || "N/A"}`, margin, y)
   y += 15
-  pdf.text(`Username: ${report.patient_data.username || "N/A"}`, margin, y)
+  pdf.text(`Username: ${report.patient_data?.username || "N/A"}`, margin, y)
   y += 24
 
   ensurePageSpace()
@@ -216,11 +196,7 @@ export async function downloadAssessmentReportFromData(assessmentId: string, rep
   y += 24
 
   ensurePageSpace(100)
-  addWrappedText("Result Interpretation", report.interpretation?.result || "Not available")
-  addWrappedText("Advice", report.interpretation?.advice || "Not available")
-  addWrappedText("Mental Symptoms", report.interpretation?.symptoms?.mental || "Not available")
-  addWrappedText("Physical Symptoms", report.interpretation?.symptoms?.physical || "Not available")
-  addWrappedText("Linked Conditions", report.interpretation?.symptoms?.conditions_linked || "Not available")
+  addWrappedText("Overall Interpretation", report.interpretation || "Not available")
 
   const categories = report.test_chart_data ?? []
   const chartType = (report.test_charts || "").toLowerCase()
@@ -251,18 +227,30 @@ export async function downloadAssessmentReportFromData(assessmentId: string, rep
     }
   }
 
-  if (categories.length > 0) {
+  const insightRows =
+    report.sub_category_result.length > 0
+      ? report.sub_category_result
+      : categories.map((item) => ({
+          sub_category: item.sub_category,
+          sub_category_score: item.sub_category_score,
+          sub_category_descriptor: item.sub_category_descriptor,
+        }))
+
+  if (insightRows.length > 0) {
     ensurePageSpace(60)
     pdf.setFont("helvetica", "bold")
     pdf.setFontSize(14)
     pdf.text("Sub-category Insights", margin, y)
     y += 18
 
-    for (const item of categories) {
+    for (const item of insightRows) {
       ensurePageSpace(75)
       const categoryName = (item.sub_category || "Unnamed Category").trim()
       const descriptors =
-        item.sub_category_descriptor?.map((entry) => entry.test_descriptor).filter(Boolean).join(" | ") || "No descriptor available"
+        item.sub_category_descriptor
+          ?.map((entry) => formatDescriptorText(entry.test_descriptor))
+          .filter(Boolean)
+          .join("\n\n") || "No descriptor available"
 
       pdf.setFont("helvetica", "bold")
       pdf.setFontSize(11)
@@ -273,6 +261,15 @@ export async function downloadAssessmentReportFromData(assessmentId: string, rep
       const descriptorLines = pdf.splitTextToSize(descriptors, contentWidth)
       pdf.text(descriptorLines, margin, y)
       y += descriptorLines.length * 14 + 10
+
+      if ("sub_category_questions" in item && item.sub_category_questions?.length) {
+        for (let i = 0; i < item.sub_category_questions.length; i++) {
+          const question = item.sub_category_questions[i]
+          const answer = item.sub_category_selected_option?.[i]?.selected_option || "Not available"
+          ensurePageSpace(50)
+          addWrappedText(`Q: ${question.question}`, `Answer: ${answer}`, 10)
+        }
+      }
     }
   }
 
@@ -282,12 +279,12 @@ export async function downloadAssessmentReportFromData(assessmentId: string, rep
 }
 
 export async function fetchAssessmentReport(assessmentId: string): Promise<AssessmentReport> {
-  const response = await apiClient.post<{ data?: AssessmentReport; message?: string }>(
+  const response = await apiClient.post<{ data?: Record<string, unknown>; message?: string; status?: string }>(
     "/api/external/assessment-report/create",
     { assessment_id: assessmentId },
   )
 
-  const reportData = response.data?.data
+  const reportData = normalizeAssessmentReport(response.data?.data)
   if (!reportData) {
     throw new Error(response.data?.message || "Invalid report response")
   }

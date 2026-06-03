@@ -2,48 +2,16 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { apiClient } from "@/lib/api-client"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import ReportHeader from "@/components/results/ReportHeader"
 import ChartSection from "@/components/results/ChartSection"
 import ResultsNavigation from "@/components/results/ResultsNavigation"
-import { downloadAssessmentReportFromData } from "@/lib/report-download"
-
-interface AssessmentReportChartData {
-  sub_category: string
-  sub_category_score: number
-  sub_category_descriptor?: Array<{
-    test_descriptor_id: number
-    test_descriptor: string
-  }>
-}
-
-interface AssessmentReport {
-  patient_data: {
-    patient_id: string
-    first_name: string
-    last_name: string
-    username: string
-    role: number
-  }
-  test_name: string
-  overall_score: number
-  completed_at?: string
-  completion_date?: string
-  interpretation?: {
-    advice?: string
-    result?: string
-    symptoms?: {
-      mental?: string
-      physical?: string
-      conditions_linked?: string
-    }
-  }
-  test_charts?: string
-  test_chart_data?: AssessmentReportChartData[]
-}
+import InterpretationSection from "@/components/results/InterpretationSection"
+import SubCategoryResultSection from "@/components/results/SubCategoryResultSection"
+import { formatDescriptorText, getPatientDisplayName, type AssessmentReport } from "@/lib/assessment-report"
+import { downloadAssessmentReportFromData, fetchAssessmentReport } from "@/lib/report-download"
 
 export default function TestResultDetailPage() {
   const params = useParams()
@@ -66,16 +34,8 @@ export default function TestResultDetailPage() {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await apiClient.post<{ data?: AssessmentReport; message?: string }>(
-          "/api/external/assessment-report/create",
-          { assessment_id: assessmentId },
-        )
-
-        if (!response.data?.data) {
-          throw new Error(response.data?.message || "Invalid report response")
-        }
-
-        setReport(response.data.data)
+        const reportData = await fetchAssessmentReport(assessmentId)
+        setReport(reportData)
       } catch (err) {
         console.error("[v0] Error loading report detail:", err)
         setError("Unable to load report details.")
@@ -124,6 +84,8 @@ export default function TestResultDetailPage() {
     )
   }
 
+  const chartInsights = report.test_chart_data ?? []
+
   return (
     <main className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -131,7 +93,7 @@ export default function TestResultDetailPage() {
 
         <ReportHeader
           testName={report.test_name}
-          patientName={`${report.patient_data.first_name} ${report.patient_data.last_name}`.trim()}
+          patientName={getPatientDisplayName(report)}
           overallScore={Number(report.overall_score || 0)}
           completionDate={report.completed_at || report.completion_date}
           onBack={() => router.push("/test-results")}
@@ -139,48 +101,29 @@ export default function TestResultDetailPage() {
           isDownloading={isDownloading}
         />
 
-        <ChartSection chartType={report.test_charts} chartData={report.test_chart_data ?? []} />
+        <ChartSection chartType={report.test_charts} chartData={chartInsights} />
 
-        {report.interpretation && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card className="p-4 border border-border">
-              <h4 className="font-semibold text-foreground mb-2">Result Interpretation</h4>
-              <p className="text-sm text-foreground">{report.interpretation.result || "Not available"}</p>
-              <p className="text-sm text-muted-foreground mt-3">
-                <span className="font-medium text-foreground">Advice:</span> {report.interpretation.advice || "Not available"}
-              </p>
-            </Card>
-            <Card className="p-4 border border-border">
-              <h4 className="font-semibold text-foreground mb-2">Linked Symptoms & Conditions</h4>
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Mental:</span> {report.interpretation.symptoms?.mental || "Not available"}
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                <span className="font-medium text-foreground">Physical:</span> {report.interpretation.symptoms?.physical || "Not available"}
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                <span className="font-medium text-foreground">Conditions:</span>{" "}
-                {report.interpretation.symptoms?.conditions_linked || "Not available"}
-              </p>
-            </Card>
-          </div>
-        )}
+        <InterpretationSection interpretation={report.interpretation} />
 
-        {(report.test_chart_data?.length ?? 0) > 0 && (
+        <SubCategoryResultSection items={report.sub_category_result} />
+
+        {chartInsights.length > 0 && report.sub_category_result.length === 0 && (
           <Card className="p-4 border border-border">
             <h4 className="font-semibold text-foreground mb-3">Sub-category Insights</h4>
             <div className="space-y-3">
-              {(report.test_chart_data || []).map((item, idx) => (
+              {chartInsights.map((item, idx) => (
                 <Card key={`${item.sub_category}-${idx}`} className="p-3 border border-border">
                   <div className="flex items-start justify-between gap-2 flex-wrap">
                     <div>
                       <p className="font-semibold text-foreground">{item.sub_category}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {item.sub_category_descriptor?.map((d) => d.test_descriptor).join(" | ") || "No descriptor available"}
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                        {item.sub_category_descriptor
+                          ?.map((d) => formatDescriptorText(d.test_descriptor))
+                          .join("\n\n") || "No descriptor available"}
                       </p>
                     </div>
                     <Badge variant="secondary" className="bg-primary/10 text-primary border-0">
-                      Score: {Number(item.sub_category_score || 0).toFixed(2)}
+                      Score: {Number(item.sub_category_score || 0)}
                     </Badge>
                   </div>
                 </Card>

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { AlertCircle, Award, Calendar, Loader2, Minimize2, PieChartIcon, TrendingUp } from "lucide-react"
-import { apiClient } from "@/lib/api-client"
 import {
   fetchPatientAssessments,
   isCompletedAssessment,
@@ -15,7 +14,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { isIndividualDashboardUser, normalizeDashboardUser } from "@/lib/dashboard-user"
-import { downloadAssessmentReportFromData, type AssessmentReport } from "@/lib/report-download"
+import { formatDescriptorText, getPatientDisplayName, type AssessmentReport } from "@/lib/assessment-report"
+import InterpretationSection from "@/components/results/InterpretationSection"
+import SubCategoryResultSection from "@/components/results/SubCategoryResultSection"
+import { downloadAssessmentReportFromData, fetchAssessmentReport } from "@/lib/report-download"
 
 const CHART_COLORS = ["#2563eb", "#14b8a6", "#8b5cf6", "#f59e0b", "#ef4444", "#22c55e"]
 
@@ -131,19 +133,6 @@ export default function TestResultsView() {
 
   const handleMinimizeReport = () => {
     setSelectedAssessmentId(null)
-  }
-
-  const fetchAssessmentReport = async (assessmentId: string): Promise<AssessmentReport> => {
-    const response = await apiClient.post<{ data?: AssessmentReport; message?: string }>(
-      "/api/external/assessment-report/create",
-      { assessment_id: assessmentId },
-    )
-
-    const reportData = response.data?.data
-    if (!reportData) {
-      throw new Error(response.data?.message || "Invalid report response")
-    }
-    return reportData
   }
 
   const selectedReport = selectedAssessmentId ? reportsByAssessmentId[selectedAssessmentId] : null
@@ -323,7 +312,7 @@ export default function TestResultsView() {
                 <div>
                   <h3 className="text-2xl font-bold text-foreground">{selectedReport.test_name} Report</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Patient: {selectedReport.patient_data.first_name} {selectedReport.patient_data.last_name}
+                    Patient: {getPatientDisplayName(selectedReport)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -388,35 +377,11 @@ export default function TestResultsView() {
                 </div>
               )}
 
-              {selectedReport.interpretation && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-                  <Card className="p-4 border border-border">
-                    <h4 className="font-semibold text-foreground mb-2">Result Interpretation</h4>
-                    <p className="text-sm text-foreground">{selectedReport.interpretation.result || "Not available"}</p>
-                    <p className="text-sm text-muted-foreground mt-3">
-                      <span className="font-medium text-foreground">Advice:</span>{" "}
-                      {selectedReport.interpretation.advice || "Not available"}
-                    </p>
-                  </Card>
-                  <Card className="p-4 border border-border">
-                    <h4 className="font-semibold text-foreground mb-2">Linked Symptoms & Conditions</h4>
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-medium text-foreground">Mental:</span>{" "}
-                      {selectedReport.interpretation.symptoms?.mental || "Not available"}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      <span className="font-medium text-foreground">Physical:</span>{" "}
-                      {selectedReport.interpretation.symptoms?.physical || "Not available"}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      <span className="font-medium text-foreground">Conditions:</span>{" "}
-                      {selectedReport.interpretation.symptoms?.conditions_linked || "Not available"}
-                    </p>
-                  </Card>
-                </div>
-              )}
+              <InterpretationSection interpretation={selectedReport.interpretation} />
 
-              {selectedChartData.length > 0 && (
+              <SubCategoryResultSection items={selectedReport.sub_category_result} />
+
+              {selectedChartData.length > 0 && selectedReport.sub_category_result.length === 0 && (
                 <div className="space-y-3">
                   <h4 className="font-semibold text-foreground">Sub-category Insights</h4>
                   {selectedChartData.map((category, idx) => (
@@ -424,13 +389,14 @@ export default function TestResultsView() {
                       <div className="flex items-start justify-between gap-3 flex-wrap">
                         <div>
                           <h5 className="font-semibold text-foreground">{category.sub_category.trim()}</h5>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {category.sub_category_descriptor?.map((entry) => entry.test_descriptor).join(" | ") ||
-                              "No descriptor available"}
+                          <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
+                            {category.sub_category_descriptor
+                              ?.map((entry) => formatDescriptorText(entry.test_descriptor))
+                              .join("\n\n") || "No descriptor available"}
                           </p>
                         </div>
                         <Badge variant="secondary" className="bg-primary/10 text-primary border-0">
-                          Score: {Number(category.sub_category_score || 0).toFixed(2)}
+                          Score: {Number(category.sub_category_score || 0)}
                         </Badge>
                       </div>
                     </Card>
