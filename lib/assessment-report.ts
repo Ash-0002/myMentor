@@ -34,7 +34,12 @@ export interface AssessmentReportPatientData {
   first_name: string
   last_name: string
   username: string
-  role?: number
+  role?: number | string
+  email?: string
+  patient_name?: string
+  organization?: string
+  report_id?: string
+  assessment_type?: string
 }
 
 export interface AssessmentReport {
@@ -155,12 +160,36 @@ function parseSubCategoryResult(value: unknown): AssessmentReportSubCategoryResu
 function parsePatientData(value: unknown): AssessmentReportPatientData | undefined {
   const row = asRecord(value)
   if (!row) return undefined
+
+  const patientName = typeof row.patient_name === "string" ? row.patient_name.trim() : ""
+  let firstName = String(row.first_name ?? "")
+  let lastName = String(row.last_name ?? "")
+
+  if (patientName && !firstName && !lastName) {
+    const nameParts = patientName.split(/\s+/)
+    firstName = nameParts[0] ?? ""
+    lastName = nameParts.slice(1).join(" ")
+  }
+
+  const email = typeof row.email === "string" ? row.email : ""
+  const username = String(row.username ?? email)
+
   return {
     patient_id: String(row.patient_id ?? ""),
-    first_name: String(row.first_name ?? ""),
-    last_name: String(row.last_name ?? ""),
-    username: String(row.username ?? ""),
-    role: row.role !== undefined ? Number(row.role) : undefined,
+    first_name: firstName,
+    last_name: lastName,
+    username,
+    patient_name: patientName || undefined,
+    email: email || undefined,
+    organization: typeof row.organization === "string" ? row.organization : undefined,
+    report_id: typeof row.report_id === "string" ? row.report_id : undefined,
+    assessment_type: typeof row.assessment_type === "string" ? row.assessment_type : undefined,
+    role:
+      row.role !== undefined
+        ? typeof row.role === "string"
+          ? row.role
+          : Number(row.role)
+        : undefined,
   }
 }
 
@@ -185,8 +214,9 @@ export function getPatientDataFromStorage(): AssessmentReportPatientData | undef
 export function getPatientDisplayName(report: AssessmentReport): string {
   const patient = report.patient_data
   if (!patient) return "Patient"
+  if (patient.patient_name) return patient.patient_name
   const fullName = `${patient.first_name || ""} ${patient.last_name || ""}`.trim()
-  return fullName || patient.username || patient.patient_id || "Patient"
+  return fullName || patient.email || patient.username || patient.patient_id || "Patient"
 }
 
 export function formatDescriptorText(descriptor: string): string {
@@ -197,18 +227,20 @@ export function normalizeAssessmentReport(raw: unknown): AssessmentReport | null
   const data = asRecord(raw)
   if (!data) return null
 
-  const patientFromApi = parsePatientData(data.patient_data)
+  const reportSource = asRecord(data.report) ?? data
+  const patientFromApi = parsePatientData(data.patient ?? data.patient_data)
   const patientFallback = getPatientDataFromStorage()
 
   return {
-    test_name: String(data.test_name ?? ""),
-    overall_score: Number(data.overall_score ?? 0),
-    interpretation: parseInterpretation(data.interpretation),
-    test_charts: typeof data.test_charts === "string" ? data.test_charts : undefined,
-    test_chart_data: parseChartData(data.test_chart_data),
-    sub_category_result: parseSubCategoryResult(data.sub_category_result),
+    test_name: String(reportSource.test_name ?? ""),
+    overall_score: Number(reportSource.overall_score ?? 0),
+    interpretation: parseInterpretation(reportSource.interpretation),
+    test_charts: typeof reportSource.test_charts === "string" ? reportSource.test_charts : undefined,
+    test_chart_data: parseChartData(reportSource.test_chart_data),
+    sub_category_result: parseSubCategoryResult(reportSource.sub_category_result),
     patient_data: patientFromApi ?? patientFallback,
-    completed_at: typeof data.completed_at === "string" ? data.completed_at : undefined,
-    completion_date: typeof data.completion_date === "string" ? data.completion_date : undefined,
+    completed_at: typeof reportSource.completed_at === "string" ? reportSource.completed_at : undefined,
+    completion_date:
+      typeof reportSource.completion_date === "string" ? reportSource.completion_date : undefined,
   }
 }

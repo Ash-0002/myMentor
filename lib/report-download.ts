@@ -179,8 +179,26 @@ export async function downloadAssessmentReportFromData(assessmentId: string, rep
   y += 15
   pdf.text(`Patient ID: ${report.patient_data?.patient_id || "N/A"}`, margin, y)
   y += 15
-  pdf.text(`Username: ${report.patient_data?.username || "N/A"}`, margin, y)
-  y += 24
+  if (report.patient_data?.report_id) {
+    pdf.text(`Report ID: ${report.patient_data.report_id}`, margin, y)
+    y += 15
+  }
+  if (report.patient_data?.email) {
+    pdf.text(`Email: ${report.patient_data.email}`, margin, y)
+    y += 15
+  } else if (report.patient_data?.username) {
+    pdf.text(`Username: ${report.patient_data.username}`, margin, y)
+    y += 15
+  }
+  if (report.patient_data?.organization) {
+    pdf.text(`Organization: ${report.patient_data.organization}`, margin, y)
+    y += 15
+  }
+  if (report.patient_data?.assessment_type) {
+    pdf.text(`Assessment Type: ${report.patient_data.assessment_type}`, margin, y)
+    y += 15
+  }
+  y += 9
 
   ensurePageSpace()
   pdf.setFont("helvetica", "bold")
@@ -279,12 +297,16 @@ export async function downloadAssessmentReportFromData(assessmentId: string, rep
 }
 
 export async function fetchAssessmentReport(assessmentId: string): Promise<AssessmentReport> {
-  const response = await apiClient.post<{ data?: Record<string, unknown>; message?: string; status?: string }>(
-    "/api/external/assessment-report/create",
-    { assessment_id: assessmentId },
-  )
+  const response = await apiClient.post<{
+    data?: Record<string, unknown>
+    message?: string
+    status?: string
+    report?: Record<string, unknown>
+    patient?: Record<string, unknown>
+  }>("/api/external/assessment-report/create", { assessment_id: assessmentId })
 
-  const reportData = normalizeAssessmentReport(response.data?.data)
+  const payload = response.data?.data ?? response.data
+  const reportData = normalizeAssessmentReport(payload)
   if (!reportData) {
     throw new Error(response.data?.message || "Invalid report response")
   }
