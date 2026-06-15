@@ -7,12 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, Eye, EyeOff } from "lucide-react"
 import { registerPatientJson, USER_ROLE } from "@/lib/auth-service"
-import { apiFetch } from "@/lib/backend-api"
-
-interface Hospital {
-  id: string
-  hospital_name: string
-}
+import { fetchHospitals, type Hospital } from "@/lib/hospital-api"
 
 export default function PatientRegisterPage() {
   const [formData, setFormData] = useState({
@@ -56,21 +51,10 @@ export default function PatientRegisterPage() {
     const loadHospitals = async () => {
       setIsLoadingHospitals(true)
       try {
-        const response = await apiFetch("/api/external/hospitals")
-        const json = await response.json().catch(() => ({}))
-
-        if (!response.ok) {
-          throw new Error(json?.message || "Failed to load hospitals")
-        }
-
-        const hospitalList = Array.isArray(json?.data) ? json.data : []
-        setHospitals(
-          hospitalList
-            .filter((hospital: any) => typeof hospital?.id === "string" && typeof hospital?.hospital_name === "string")
-            .map((hospital: any) => ({ id: hospital.id, hospital_name: hospital.hospital_name })),
-        )
-      } catch (err: any) {
-        setError(err.message || "Unable to load hospital list")
+        const hospitalList = await fetchHospitals()
+        setHospitals(hospitalList)
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Unable to load hospital list")
       } finally {
         setIsLoadingHospitals(false)
       }
@@ -111,7 +95,8 @@ export default function PatientRegisterPage() {
     }
 
     try {
-      const roleId = patientType === "hospital patient" ? Number(USER_ROLE.HOSPITAL_PATIENT.id) : 1
+      const roleId =
+        patientType === "hospital patient" ? USER_ROLE.HOSPITAL_PATIENT.id : USER_ROLE.INDIVIDUAL_PATIENT.id
       const response = await registerPatientJson({
         first_name: formData.first_name.trim(),
         last_name: formData.last_name.trim(),
@@ -221,7 +206,9 @@ export default function PatientRegisterPage() {
                         <option value="">{isLoadingHospitals ? "Loading hospitals..." : "Select Hospital"}</option>
                         {hospitals.map((hospital) => (
                           <option key={hospital.id} value={hospital.id}>
-                            {hospital.hospital_name}
+                            {hospital.doctor_name
+                              ? `${hospital.hospital_name} — ${hospital.doctor_name}`
+                              : hospital.hospital_name}
                           </option>
                         ))}
                       </select>

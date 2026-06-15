@@ -9,6 +9,7 @@ import PatientPortalShell from "@/components/dashboard/patient-portal-shell"
 import PatientDashboardHome from "@/components/dashboard/patient-dashboard-home"
 import PatientAssessmentsPage from "@/components/dashboard/patient-assessments-page"
 import PatientBillingView from "@/components/dashboard/patient-billing-view"
+import AdminPatientsView from "@/components/dashboard/admin-patients-view"
 import ProfileCard from "@/components/dashboard/profile-card"
 import { Card } from "@/components/ui/card"
 import {
@@ -108,10 +109,8 @@ function AdminDashboard({
         </header>
         <div className="flex-1 overflow-auto p-4 md:p-8">
           {activeNav === "dashboard" && <PatientInfo user={user} userType="admin" />}
-          {activeNav === "patients" && (
-            <Card className="p-8 text-center">
-              <p className="text-muted-foreground">Patients — Coming Soon</p>
-            </Card>
+          {activeNav === "patients" && isAdminDashboardUser(user) && (
+            <AdminPatientsView user={user} />
           )}
           {activeNav === "appointments" && (
             <Card className="p-8 text-center">

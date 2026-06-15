@@ -54,7 +54,7 @@ export function resolveTestIdForAssessment(testName: string): number | null {
 }
 
 export async function fetchPatientAssessments(patientId: string): Promise<PatientAssessment[]> {
-  const response = await apiClient.post("/api/user/details", {
+  const response = await apiClient.post("/api/patient/assessments", {
     patient_id: patientId,
   })
 

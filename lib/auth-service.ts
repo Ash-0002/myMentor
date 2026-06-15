@@ -33,12 +33,27 @@ export interface LoginResponse {
 }
 
 export const USER_ROLE = {
-  HOSPITAL_ADMIN: { id: "5", name: "hospital admin" },
-  INDIVIDUAL_PATIENT: { id: "3", name: "individual patient" },
-  HOSPITAL_PATIENT: { id: "4", name: "hospital patient" },
+  INDIVIDUAL_PATIENT: { id: 1, code: "IP", name: "Individual Patient" },
+  HOSPITAL_PATIENT: { id: 2, code: "HP", name: "Hospital Patient" },
+  HOSPITAL_ADMIN: { id: 3, code: "HA", name: "Hospital Admin" },
 } as const;
 
-type RegistrationRoleId = (typeof USER_ROLE)[keyof typeof USER_ROLE]["id"];
+export interface HospitalAdminRegistrationPayload {
+  tenant_name: string;
+  first_name: string;
+  last_name?: string;
+  username: string;
+  phone: string;
+  email: string;
+  hospital_name: string;
+  hospital_address: string;
+  hospital_phone: string;
+  hospital_email: string;
+  doctor_name: string;
+  password: string;
+  confirm_password: string;
+  country_id: number;
+}
 
 function flattenApiError(value: unknown, prefix = ""): string[] {
   if (typeof value === "string") {
@@ -91,7 +106,7 @@ function calculateAge(dateOfBirth: string): string {
 
 export function buildRegistrationFormData(
   payload: Record<string, string | File | null | undefined>,
-  roleId: RegistrationRoleId,
+  roleId: number,
 ): FormData {
   const data = new FormData();
 
@@ -109,8 +124,8 @@ export function buildRegistrationFormData(
     data.set("age", resolvedAge);
   }
 
-  data.set("role_id", roleId);
-  data.set("role", roleId);
+  data.set("role_id", String(roleId));
+  data.set("role", String(roleId));
 
   if (!data.get("country_id")) {
     data.set("country_id", "1");
@@ -146,6 +161,23 @@ export async function registerPatient(formData: FormData): Promise<any> {
   const responseData = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(getApiErrorMessage(responseData, "Registration failed"));
+  }
+
+  return responseData;
+}
+
+export async function registerHospitalAdminJson(payload: HospitalAdminRegistrationPayload): Promise<any> {
+  const response = await apiFetch("/api/external/hospital/admin/create", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const responseData = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(responseData, "Admin registration failed"));
   }
 
   return responseData;

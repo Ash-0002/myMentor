@@ -2,7 +2,8 @@ const DEFAULT_BACKEND_BASE_URL = "http://187.127.132.226:9000"
 
 export const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL ?? DEFAULT_BACKEND_BASE_URL
 
-export const API_TENANT_ID = "max_77b2"
+export const API_TENANT_ID = ""
+export const API_TENANT_NAME = ""
 
 export const API_TENANT_HEADERS = {
   "x-tenant": API_TENANT_ID,

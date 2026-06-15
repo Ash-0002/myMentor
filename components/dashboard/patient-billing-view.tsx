@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { AlertCircle, Check, Loader2 } from "lucide-react"
 import TestSelection from "@/components/test-selection"
 import { isIndividualDashboardUser } from "@/lib/dashboard-user"
-import { apiFetch } from "@/lib/backend-api"
 
 interface Test {
   id: number
@@ -103,28 +102,37 @@ export default function PatientBillingView() {
 
     setIsProcessing(true)
     try {
+      const testsToCreate = [...selectedTests]
+
       await new Promise((resolve) => setTimeout(resolve, 2000))
       setPaymentStatus("success")
       localStorage.setItem("paymentStatus", "completed")
       localStorage.setItem("paymentDate", new Date().toISOString())
-      localStorage.setItem("paidTests", JSON.stringify(selectedTests))
+      localStorage.setItem("paidTests", JSON.stringify(testsToCreate))
       localStorage.removeItem("selectedTests")
       localStorage.removeItem("paymentAmount")
       setSelectedTests([])
 
       try {
-        await apiFetch("/api/external/assessment/create", {
+        // Intentionally omit x-tenant for assessment/create (apiFetch always adds it)
+        const createResponse = await fetch("/api/external/assessment/create", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            // "x-tenant": API_TENANT_ID,
           },
           body: JSON.stringify({
-            test_ids: selectedTests.map((test) => test.id),
+            test_ids: testsToCreate.map((test) => test.id),
             patient_ids: [patientId],
           }),
         })
-      } catch {
-        // preserve previous behavior: payment success UI should not fail if create API fails
+
+        if (!createResponse.ok) {
+          const errorBody = await createResponse.json().catch(() => ({}))
+          console.error("[billing] assessment/create failed:", errorBody)
+        }
+      } catch (createError) {
+        console.error("[billing] assessment/create error:", createError)
       }
 
       setTimeout(() => {

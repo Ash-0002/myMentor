@@ -1,3 +1,5 @@
+import { USER_ROLE } from "@/lib/auth-service"
+
 export interface AdminDashboardUser {
   hospital_id: string
   first_name: string
@@ -46,6 +48,7 @@ export function isIndividualDashboardUser(value: unknown): value is IndividualDa
 }
 
 export function getDashboardUserType(user: DashboardUser): DashboardUserType {
+  if (user.role === USER_ROLE.HOSPITAL_ADMIN.id) return "admin"
   return isAdminDashboardUser(user) ? "admin" : "individual"
 }
 
@@ -75,7 +78,7 @@ export function normalizeDashboardUser(value: unknown): DashboardUser | null {
       phone: String(detail.phone ?? ""),
       email: String(detail.email ?? ""),
       address: String(detail.address ?? ""),
-      role: Number(detail.role ?? role ?? 3),
+      role: Number(detail.role ?? role ?? USER_ROLE.INDIVIDUAL_PATIENT.id),
       role_name: roleName ?? (raw.role_name ? String(raw.role_name) : "Individual Patient"),
       country: (detail.country as string | number | undefined) ?? "",
       hospital: detail.hospital ? String(detail.hospital) : null,
@@ -98,7 +101,7 @@ export function normalizeDashboardUser(value: unknown): DashboardUser | null {
       hospital_address: String(detail.hospital_address ?? ""),
       doctor_name: String(detail.doctor_name ?? ""),
       country: (detail.country as string | number | undefined) ?? "",
-      role: role ?? 5,
+      role: role ?? USER_ROLE.HOSPITAL_ADMIN.id,
     }
   }
 
@@ -116,7 +119,7 @@ export function normalizeDashboardUser(value: unknown): DashboardUser | null {
       hospital_address: String(raw.hospital_address ?? ""),
       doctor_name: String(raw.doctor_name ?? ""),
       country: (raw.country as string | number | undefined) ?? "",
-      role: Number(raw.role ?? 5),
+      role: Number(raw.role ?? USER_ROLE.HOSPITAL_ADMIN.id),
     }
   }
 
@@ -131,7 +134,7 @@ export function normalizeDashboardUser(value: unknown): DashboardUser | null {
       phone: String(raw.phone ?? ""),
       email: String(raw.email ?? ""),
       address: String(raw.address ?? ""),
-      role: Number(raw.role ?? 3),
+      role: Number(raw.role ?? USER_ROLE.INDIVIDUAL_PATIENT.id),
       role_name: raw.role_name ? String(raw.role_name) : "Individual Patient",
       country: (raw.country as string | number | undefined) ?? "",
       hospital: raw.hospital ? String(raw.hospital) : null,
