@@ -280,7 +280,7 @@ export async function downloadAssessmentReportFromData(assessmentId: string, rep
 
 export async function fetchAssessmentReport(assessmentId: string): Promise<AssessmentReport> {
   const response = await apiClient.post<{ data?: Record<string, unknown>; message?: string; status?: string }>(
-    "/api/external/assessment-report/create",
+    "api/external/assessment-report/create",
     { assessment_id: assessmentId },
   )
 
