@@ -1,11 +1,11 @@
 import { apiClient } from "@/lib/api-client"
 import {
-  formatDescriptorText,
-  getPatientDisplayName,
   normalizeAssessmentReport,
   type AssessmentReport,
   type AssessmentReportChartData,
 } from "@/lib/assessment-report"
+import { AssessmentReportPdf } from "@/lib/assessment-report-pdf"
+import { pdf } from "@react-pdf/renderer"
 
 export type {
   AssessmentReport,
@@ -127,173 +127,31 @@ function createHistogramImage(data: AssessmentReportChartData[]) {
 }
 
 export async function downloadAssessmentReportFromData(assessmentId: string, report: AssessmentReport): Promise<void> {
-  const { jsPDF } = await import("jspdf")
-  const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" })
-
-  const pageWidth = pdf.internal.pageSize.getWidth()
-  const pageHeight = pdf.internal.pageSize.getHeight()
-  const margin = 40
-  const contentWidth = pageWidth - margin * 2
-  let y = margin
-
-  const addWrappedText = (label: string, value?: string, fontSize = 11) => {
-    if (!value?.trim()) return
-    pdf.setFont("helvetica", "bold")
-    pdf.setFontSize(fontSize)
-    pdf.text(label, margin, y)
-    y += 14
-
-    pdf.setFont("helvetica", "normal")
-    const lines = pdf.splitTextToSize(value, contentWidth)
-    pdf.text(lines, margin, y)
-    y += lines.length * 14 + 8
-  }
-
-  const ensurePageSpace = (requiredHeight = 60) => {
-    if (y + requiredHeight <= pageHeight - margin) return
-    pdf.addPage()
-    y = margin
-  }
-
-  pdf.setFont("helvetica", "bold")
-  pdf.setFontSize(20)
-  pdf.text("Assessment Report", margin, y)
-  y += 24
-
-  pdf.setFont("helvetica", "normal")
-  pdf.setFontSize(11)
-  pdf.text(`Assessment ID: ${assessmentId}`, margin, y)
-  y += 18
-  pdf.text(`Generated on: ${new Date().toLocaleString()}`, margin, y)
-  y += 24
-
-  ensurePageSpace()
-  pdf.setFont("helvetica", "bold")
-  pdf.setFontSize(14)
-  pdf.text("Patient Details", margin, y)
-  y += 18
-
-  pdf.setFont("helvetica", "normal")
-  pdf.setFontSize(11)
-  pdf.text(`Name: ${getPatientDisplayName(report)}`, margin, y)
-  y += 15
-  pdf.text(`Patient ID: ${report.patient_data?.patient_id || "N/A"}`, margin, y)
-  y += 15
-  if (report.patient_data?.report_id) {
-    pdf.text(`Report ID: ${report.patient_data.report_id}`, margin, y)
-    y += 15
-  }
-  if (report.patient_data?.email) {
-    pdf.text(`Email: ${report.patient_data.email}`, margin, y)
-    y += 15
-  } else if (report.patient_data?.username) {
-    pdf.text(`Username: ${report.patient_data.username}`, margin, y)
-    y += 15
-  }
-  if (report.patient_data?.organization) {
-    pdf.text(`Organization: ${report.patient_data.organization}`, margin, y)
-    y += 15
-  }
-  if (report.patient_data?.assessment_type) {
-    pdf.text(`Assessment Type: ${report.patient_data.assessment_type}`, margin, y)
-    y += 15
-  }
-  y += 9
-
-  ensurePageSpace()
-  pdf.setFont("helvetica", "bold")
-  pdf.setFontSize(14)
-  pdf.text("Assessment Summary", margin, y)
-  y += 18
-
-  pdf.setFont("helvetica", "normal")
-  pdf.setFontSize(11)
-  pdf.text(`Test: ${report.test_name || "N/A"}`, margin, y)
-  y += 15
-  pdf.text(`Overall Score: ${Number(report.overall_score || 0).toFixed(2)}`, margin, y)
-  y += 24
-
-  ensurePageSpace(100)
-  addWrappedText("Overall Interpretation", report.interpretation || "Not available")
-
   const categories = report.test_chart_data ?? []
   const chartType = (report.test_charts || "").toLowerCase()
+  const generatedAt = new Date().toLocaleString()
+  const pieImage = chartType.includes("pie") && categories.length > 0 ? createPieChartImage(categories) : null
+  const histogramImage =
+    chartType.includes("histogram") && categories.length > 0 ? createHistogramImage(categories) : null
 
-  if (categories.length > 0 && (chartType.includes("pie") || chartType.includes("histogram"))) {
-    ensurePageSpace(280)
-    pdf.setFont("helvetica", "bold")
-    pdf.setFontSize(14)
-    pdf.text("Charts", margin, y)
-    y += 16
+  const reportDocument = AssessmentReportPdf({
+    assessmentId,
+    report,
+    generatedAt,
+    pieChartImage: pieImage,
+    histogramImage,
+  })
 
-    if (chartType.includes("pie")) {
-      const pieImage = createPieChartImage(categories)
-      if (pieImage) {
-        ensurePageSpace(220)
-        pdf.addImage(pieImage, "PNG", margin, y, contentWidth, 190)
-        y += 202
-      }
-    }
-
-    if (chartType.includes("histogram")) {
-      const histogramImage = createHistogramImage(categories)
-      if (histogramImage) {
-        ensurePageSpace(220)
-        pdf.addImage(histogramImage, "PNG", margin, y, contentWidth, 190)
-        y += 202
-      }
-    }
-  }
-
-  const insightRows =
-    report.sub_category_result.length > 0
-      ? report.sub_category_result
-      : categories.map((item) => ({
-          sub_category: item.sub_category,
-          sub_category_score: item.sub_category_score,
-          sub_category_descriptor: item.sub_category_descriptor,
-        }))
-
-  if (insightRows.length > 0) {
-    ensurePageSpace(60)
-    pdf.setFont("helvetica", "bold")
-    pdf.setFontSize(14)
-    pdf.text("Sub-category Insights", margin, y)
-    y += 18
-
-    for (const item of insightRows) {
-      ensurePageSpace(75)
-      const categoryName = (item.sub_category || "Unnamed Category").trim()
-      const descriptors =
-        item.sub_category_descriptor
-          ?.map((entry) => formatDescriptorText(entry.test_descriptor))
-          .filter(Boolean)
-          .join("\n\n") || "No descriptor available"
-
-      pdf.setFont("helvetica", "bold")
-      pdf.setFontSize(11)
-      pdf.text(`${categoryName} (Score: ${Number(item.sub_category_score || 0).toFixed(2)})`, margin, y)
-      y += 14
-
-      pdf.setFont("helvetica", "normal")
-      const descriptorLines = pdf.splitTextToSize(descriptors, contentWidth)
-      pdf.text(descriptorLines, margin, y)
-      y += descriptorLines.length * 14 + 10
-
-      if ("sub_category_questions" in item && item.sub_category_questions?.length) {
-        for (let i = 0; i < item.sub_category_questions.length; i++) {
-          const question = item.sub_category_questions[i]
-          const answer = item.sub_category_selected_option?.[i]?.selected_option || "Not available"
-          ensurePageSpace(50)
-          addWrappedText(`Q: ${question.question}`, `Answer: ${answer}`, 10)
-        }
-      }
-    }
-  }
+  const blob = await pdf(reportDocument).toBlob()
 
   const safeTestName = sanitizeFileName(report.test_name || "assessment")
   const safeAssessmentId = sanitizeFileName(assessmentId)
-  pdf.save(`${safeTestName}-${safeAssessmentId}-report.pdf`)
+  const objectUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = objectUrl
+  anchor.download = `${safeTestName}-${safeAssessmentId}-report.pdf`
+  anchor.click()
+  URL.revokeObjectURL(objectUrl)
 }
 
 export async function fetchAssessmentReport(assessmentId: string): Promise<AssessmentReport> {
