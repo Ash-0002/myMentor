@@ -17,9 +17,8 @@ import { isIndividualDashboardUser, normalizeDashboardUser } from "@/lib/dashboa
 import { formatDescriptorText, getPatientDisplayName, type AssessmentReport } from "@/lib/assessment-report"
 import InterpretationSection from "@/components/results/InterpretationSection"
 import SubCategoryResultSection from "@/components/results/SubCategoryResultSection"
+import { getChartColor } from "@/lib/chart-colors"
 import { downloadAssessmentReportFromData, fetchAssessmentReport } from "@/lib/report-download"
-
-const CHART_COLORS = ["#2563eb", "#14b8a6", "#8b5cf6", "#f59e0b", "#ef4444", "#22c55e"]
 
 function getPatientIdFromStorage(): string | null {
   try {
@@ -344,7 +343,7 @@ export default function TestResultsView() {
                           <ChartTooltip content={<ChartTooltipContent />} />
                           <Pie data={selectedChartData} dataKey="sub_category_score" nameKey="sub_category" outerRadius={95}>
                             {selectedChartData.map((_, index) => (
-                              <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                              <Cell key={index} fill={getChartColor(index)} />
                             ))}
                           </Pie>
                         </PieChart>
@@ -369,7 +368,11 @@ export default function TestResultsView() {
                           <XAxis dataKey="sub_category" tickLine={false} axisLine={false} tickMargin={8} />
                           <YAxis tickLine={false} axisLine={false} />
                           <ChartTooltip content={<ChartTooltipContent />} />
-                          <Bar dataKey="sub_category_score" fill="var(--color-sub_category_score)" radius={6} />
+                          <Bar dataKey="sub_category_score" radius={6}>
+                            {selectedChartData.map((_, index) => (
+                              <Cell key={index} fill={getChartColor(index)} />
+                            ))}
+                          </Bar>
                         </BarChart>
                       </ChartContainer>
                     </Card>

@@ -5,6 +5,7 @@ import {
   type AssessmentReportChartData,
 } from "@/lib/assessment-report"
 import { AssessmentReportPdf } from "@/lib/assessment-report-pdf"
+import { getChartColor } from "@/lib/chart-colors"
 import { pdf } from "@react-pdf/renderer"
 
 export type {
@@ -12,8 +13,6 @@ export type {
   AssessmentReportChartData,
   AssessmentReportSubCategoryResult,
 } from "@/lib/assessment-report"
-
-const CHART_COLORS = ["#2563eb", "#14b8a6", "#8b5cf6", "#f59e0b", "#ef4444", "#22c55e"]
 
 function sanitizeFileName(input: string) {
   return input.replace(/[^a-z0-9-_.]/gi, "_")
@@ -49,7 +48,7 @@ function createPieChartImage(data: AssessmentReportChartData[]) {
     ctx.moveTo(centerX, centerY)
     ctx.arc(centerX, centerY, radius, startAngle, endAngle)
     ctx.closePath()
-    ctx.fillStyle = CHART_COLORS[index % CHART_COLORS.length]
+    ctx.fillStyle = getChartColor(index)
     ctx.fill()
 
     startAngle = endAngle
@@ -60,7 +59,7 @@ function createPieChartImage(data: AssessmentReportChartData[]) {
     const value = Number(item.sub_category_score || 0)
     const percent = ((value / total) * 100).toFixed(1)
 
-    ctx.fillStyle = CHART_COLORS[index % CHART_COLORS.length]
+    ctx.fillStyle = getChartColor(index)
     ctx.fillRect(420, legendY - 12, 14, 14)
     ctx.fillStyle = "#111827"
     ctx.font = "13px Arial"
@@ -107,7 +106,7 @@ function createHistogramImage(data: AssessmentReportChartData[]) {
     const x = chartX + barGap + index * (barWidth + barGap)
     const y = chartY + chartHeight - barHeight
 
-    ctx.fillStyle = "#14b8a6"
+    ctx.fillStyle = getChartColor(index)
     ctx.fillRect(x, y, barWidth, barHeight)
     ctx.fillStyle = "#0f172a"
     ctx.font = "12px Arial"
