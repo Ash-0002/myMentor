@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { isIndividualDashboardUser, normalizeDashboardUser } from "@/lib/dashboard-user"
-import { formatDescriptorText, getPatientDisplayName, type AssessmentReport } from "@/lib/assessment-report"
+import { getPatientDisplayName, getSubCategoryInsightItems, type AssessmentReport } from "@/lib/assessment-report"
 import InterpretationSection from "@/components/results/InterpretationSection"
 import SubCategoryResultSection from "@/components/results/SubCategoryResultSection"
 import { getChartColor } from "@/lib/chart-colors"
@@ -382,30 +382,7 @@ export default function TestResultsView() {
 
               <InterpretationSection interpretation={selectedReport.interpretation} />
 
-              <SubCategoryResultSection items={selectedReport.sub_category_result} />
-
-              {selectedChartData.length > 0 && selectedReport.sub_category_result.length === 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-foreground">Sub-category Insights</h4>
-                  {selectedChartData.map((category, idx) => (
-                    <Card key={`${category.sub_category}-${idx}`} className="p-4 border border-border">
-                      <div className="flex items-start justify-between gap-3 flex-wrap">
-                        <div>
-                          <h5 className="font-semibold text-foreground">{category.sub_category.trim()}</h5>
-                          <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
-                            {category.sub_category_descriptor
-                              ?.map((entry) => formatDescriptorText(entry.test_descriptor))
-                              .join("\n\n") || "No descriptor available"}
-                          </p>
-                        </div>
-                        <Badge variant="secondary" className="bg-primary/10 text-primary border-0">
-                          Score: {Number(category.sub_category_score || 0)}
-                        </Badge>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
+              <SubCategoryResultSection items={getSubCategoryInsightItems(selectedReport)} />
             </Card>
           )}
         </>

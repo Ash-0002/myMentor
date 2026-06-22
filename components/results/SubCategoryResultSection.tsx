@@ -5,12 +5,13 @@ import { Badge } from "@/components/ui/badge"
 import SubCategoryScoreBar from "@/components/results/SubCategoryScoreBar"
 import {
   formatDescriptorText,
-  type AssessmentReportSubCategoryResult,
+  getSubCategoryInsightItems,
+  type SubCategoryInsightItem,
 } from "@/lib/assessment-report"
-import { getScoreBadgeColorClass, getScoreLevel } from "@/lib/sub-category-score"
+import { getScoreBadgeColorClass, getScoreLevel, getScoreLevelLabel, SUB_CATEGORY_MAX_SCORE } from "@/lib/sub-category-score"
 
 interface SubCategoryResultSectionProps {
-  items: AssessmentReportSubCategoryResult[]
+  items: SubCategoryInsightItem[]
   title?: string
 }
 
@@ -26,17 +27,22 @@ export default function SubCategoryResultSection({
       {items.map((item, idx) => {
         const score = Number(item.sub_category_score || 0)
         const level = getScoreLevel(score)
-        const descriptors =
-          item.sub_category_descriptor
-            ?.map((descriptor) => formatDescriptorText(descriptor.test_descriptor))
-            .filter(Boolean) ?? []
+        const descriptors = Array.from(
+          new Set(
+            (item.sub_category_descriptor ?? [])
+              .map((descriptor) => formatDescriptorText(descriptor.test_descriptor))
+              .filter(Boolean),
+          ),
+        )
 
         return (
           <Card key={`${item.sub_category}-${idx}`} className="space-y-4 border border-border p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <h5 className="font-semibold text-foreground">{item.sub_category.trim()}</h5>
+              <h5 className="font-semibold text-foreground">
+                {item.sub_category.trim()} ({score.toFixed(0)}/{SUB_CATEGORY_MAX_SCORE})
+              </h5>
               <Badge variant="outline" className={`border ${getScoreBadgeColorClass(level)}`}>
-                Score: {score.toFixed(2)}
+                {getScoreLevelLabel(level)}
               </Badge>
             </div>
 

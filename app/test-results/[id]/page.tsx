@@ -4,13 +4,12 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import ReportHeader from "@/components/results/ReportHeader"
 import ChartSection from "@/components/results/ChartSection"
 import ResultsNavigation from "@/components/results/ResultsNavigation"
 import InterpretationSection from "@/components/results/InterpretationSection"
 import SubCategoryResultSection from "@/components/results/SubCategoryResultSection"
-import { formatDescriptorText, getPatientDisplayName, type AssessmentReport } from "@/lib/assessment-report"
+import { getPatientDisplayName, getSubCategoryInsightItems, type AssessmentReport } from "@/lib/assessment-report"
 import { downloadAssessmentReportFromData, fetchAssessmentReport } from "@/lib/report-download"
 
 export default function TestResultDetailPage() {
@@ -105,32 +104,7 @@ export default function TestResultDetailPage() {
 
         <InterpretationSection interpretation={report.interpretation} />
 
-        <SubCategoryResultSection items={report.sub_category_result} />
-
-        {chartInsights.length > 0 && report.sub_category_result.length === 0 && (
-          <Card className="p-4 border border-border">
-            <h4 className="font-semibold text-foreground mb-3">Sub-category Insights</h4>
-            <div className="space-y-3">
-              {chartInsights.map((item, idx) => (
-                <Card key={`${item.sub_category}-${idx}`} className="p-3 border border-border">
-                  <div className="flex items-start justify-between gap-2 flex-wrap">
-                    <div>
-                      <p className="font-semibold text-foreground">{item.sub_category}</p>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                        {item.sub_category_descriptor
-                          ?.map((d) => formatDescriptorText(d.test_descriptor))
-                          .join("\n\n") || "No descriptor available"}
-                      </p>
-                    </div>
-                    <Badge variant="secondary" className="bg-primary/10 text-primary border-0">
-                      Score: {Number(item.sub_category_score || 0)}
-                    </Badge>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </Card>
-        )}
+        <SubCategoryResultSection items={getSubCategoryInsightItems(report)} />
       </div>
     </main>
   )

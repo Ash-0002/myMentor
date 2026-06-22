@@ -144,7 +144,6 @@ export default function TestSelection({
 
   const handleCategoryChange = async (categoryId: number) => {
     setSelectedCategory(categoryId)
-    setSelectedTests([])
     setTests([])
     setError(null)
 
@@ -232,6 +231,9 @@ export default function TestSelection({
             <label className="text-sm font-semibold text-foreground mb-3 block">
               Step 2: Select Tests from {categories.find((c) => c.id === selectedCategory)?.category}
             </label>
+            <p className="text-xs text-muted-foreground mb-3">
+              You can switch categories and keep tests selected from multiple categories.
+            </p>
 
             {isLoadingTests ? (
               <div className="flex items-center gap-2 text-muted-foreground py-8">

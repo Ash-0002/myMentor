@@ -1,6 +1,19 @@
 import React from "react"
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
-import { formatDescriptorText, getPatientDisplayName, type AssessmentReport } from "@/lib/assessment-report"
+import {
+  formatDescriptorText,
+  getPatientDisplayName,
+  getSubCategoryInsightItems,
+  type AssessmentReport,
+} from "@/lib/assessment-report"
+import {
+  getScoreBarColorHex,
+  getScoreLevel,
+  getScoreLevelLabel,
+  getScorePercent,
+  getScoreTrackColorHex,
+  SUB_CATEGORY_MAX_SCORE,
+} from "@/lib/sub-category-score"
 
 interface AssessmentReportPdfProps {
   assessmentId: string
@@ -88,7 +101,56 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: "#6b7280",
   },
+  scoreBarTrack: {
+    height: 10,
+    borderRadius: 5,
+    overflow: "hidden",
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  scoreBarFill: {
+    height: 10,
+    borderRadius: 5,
+  },
+  scoreBarMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 2,
+  },
+  scoreBarMetaText: {
+    fontSize: 9,
+    color: "#6b7280",
+  },
 })
+
+function PdfSubCategoryScoreBar({ score }: { score: number }) {
+  const percent = getScorePercent(score, SUB_CATEGORY_MAX_SCORE)
+  const level = getScoreLevel(score, SUB_CATEGORY_MAX_SCORE)
+
+  return (
+    <View>
+      <View style={styles.scoreBarMeta}>
+        <Text style={styles.scoreBarMetaText}>
+          {score.toFixed(0)}/{SUB_CATEGORY_MAX_SCORE}
+        </Text>
+        <Text style={styles.scoreBarMetaText}>
+          {getScoreLevelLabel(level)} · {Math.round(percent)}%
+        </Text>
+      </View>
+      <View style={[styles.scoreBarTrack, { backgroundColor: getScoreTrackColorHex(level) }]}>
+        <View
+          style={[
+            styles.scoreBarFill,
+            {
+              width: `${percent}%`,
+              backgroundColor: getScoreBarColorHex(level),
+            },
+          ]}
+        />
+      </View>
+    </View>
+  )
+}
 
 export function AssessmentReportPdf({
   assessmentId,
@@ -97,15 +159,7 @@ export function AssessmentReportPdf({
   pieChartImage,
   histogramImage,
 }: AssessmentReportPdfProps) {
-  const categories = report.test_chart_data ?? []
-  const insightRows =
-    report.sub_category_result.length > 0
-      ? report.sub_category_result
-      : categories.map((item) => ({
-          sub_category: item.sub_category,
-          sub_category_score: item.sub_category_score,
-          sub_category_descriptor: item.sub_category_descriptor,
-        }))
+  const insightRows = getSubCategoryInsightItems(report)
 
   return (
     <Document title={`${report.test_name || "Assessment"} report`}>
@@ -169,26 +223,32 @@ export function AssessmentReportPdf({
 
         {insightRows.length > 0 ? <Text style={styles.sectionTitle}>Sub-category Insights</Text> : null}
         {insightRows.map((item, index) => {
-          const descriptorText =
-            item.sub_category_descriptor
-              ?.map((entry) => formatDescriptorText(entry.test_descriptor))
-              .filter(Boolean)
-              .join("\n\n") || "No descriptor available"
+          const score = Number(item.sub_category_score || 0)
+          const descriptorText = Array.from(
+            new Set(
+              (item.sub_category_descriptor ?? [])
+                .map((entry) => formatDescriptorText(entry.test_descriptor))
+                .filter(Boolean),
+            ),
+          ).join("\n\n")
           return (
             <View key={`${item.sub_category || "category"}-${index}`} style={styles.insightCard}>
               <Text style={styles.subTitle}>
-                {(item.sub_category || "Unnamed Category").trim()} (Score:{" "}
-                {Number(item.sub_category_score || 0).toFixed(2)})
+                {(item.sub_category || "Unnamed Category").trim()} ({score.toFixed(0)}/{SUB_CATEGORY_MAX_SCORE})
               </Text>
-              <Text style={styles.textRow}>{descriptorText}</Text>
-              {"sub_category_questions" in item && item.sub_category_questions?.length ? (
+              <PdfSubCategoryScoreBar score={score} />
+              {descriptorText ? <Text style={styles.textRow}>{descriptorText}</Text> : null}
+              {item.sub_category_questions?.length ? (
                 <View style={{ marginTop: 4 }}>
-                  {item.sub_category_questions.map((question, qIndex) => (
-                    <Text key={`${question.question_id}-${qIndex}`} style={[styles.textRow, styles.mutedText]}>
-                      Q: {question.question} | A:{" "}
-                      {item.sub_category_selected_option?.[qIndex]?.selected_option || "Not available"}
-                    </Text>
-                  ))}
+                  {item.sub_category_questions.map((question, qIndex) => {
+                    const answer = item.sub_category_selected_option?.[qIndex]?.selected_option
+                    return (
+                      <Text key={`${question.question_id}-${qIndex}`} style={[styles.textRow, styles.mutedText]}>
+                        Q: {question.question}
+                        {answer ? ` | A: ${answer}` : ""}
+                      </Text>
+                    )
+                  })}
                 </View>
               ) : null}
             </View>

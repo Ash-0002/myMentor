@@ -223,6 +223,20 @@ export function formatDescriptorText(descriptor: string): string {
   return descriptor.replace(/\\n/g, "\n").trim()
 }
 
+export type SubCategoryInsightItem = AssessmentReportSubCategoryResult
+
+export function getSubCategoryInsightItems(report: AssessmentReport): SubCategoryInsightItem[] {
+  if (report.sub_category_result.length > 0) {
+    return report.sub_category_result
+  }
+
+  return (report.test_chart_data ?? []).map((item) => ({
+    sub_category: item.sub_category,
+    sub_category_score: item.sub_category_score,
+    sub_category_descriptor: item.sub_category_descriptor,
+  }))
+}
+
 export function normalizeAssessmentReport(raw: unknown): AssessmentReport | null {
   const data = asRecord(raw)
   if (!data) return null

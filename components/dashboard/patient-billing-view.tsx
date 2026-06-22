@@ -111,7 +111,6 @@ export default function PatientBillingView() {
       localStorage.setItem("paidTests", JSON.stringify(testsToCreate))
       localStorage.removeItem("selectedTests")
       localStorage.removeItem("paymentAmount")
-      setSelectedTests([])
 
       try {
         // Intentionally omit x-tenant for assessment/create (apiFetch always adds it)
@@ -136,8 +135,8 @@ export default function PatientBillingView() {
       }
 
       setTimeout(() => {
-        router.push("/dashboard?view=assessments")
-      }, 1500)
+        router.replace("/dashboard?view=assessments")
+      }, 1200)
     } catch {
       setPaymentStatus("failed")
     }
@@ -156,6 +155,61 @@ export default function PatientBillingView() {
       )
     }
 
+    if (paymentStatus === "success") {
+      return (
+        <div className="mx-auto max-w-2xl">
+          <Card className="border border-border bg-card p-8 shadow-lg md:p-12">
+            <div className="py-6 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                <Check className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="mb-2 text-2xl font-bold text-foreground">Payment Successful!</h3>
+              <p className="mb-6 text-muted-foreground">Redirecting to My Assessments...</p>
+              <div className="flex justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            </div>
+          </Card>
+        </div>
+      )
+    }
+
+    if (paymentStatus === "failed") {
+      return (
+        <div className="mx-auto max-w-2xl">
+          <Card className="border border-border bg-card p-8 shadow-lg md:p-12">
+            <div className="py-6 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                <AlertCircle className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="mb-2 text-2xl font-bold text-foreground">Payment Failed</h3>
+              <p className="mb-6 text-muted-foreground">
+                {!patientId ? "Patient ID not found in session. Please login again." : "Please try again or contact support"}
+              </p>
+              <div className="flex flex-col gap-2">
+                <Button
+                  onClick={() => {
+                    setPaymentStatus("pending")
+                    setIsProcessing(false)
+                  }}
+                  className="w-full"
+                >
+                  Try Again
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/dashboard?view=billing")}
+                  className="w-full"
+                >
+                  Back to Browse & Purchase
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )
+    }
+
     if (selectedTests.length === 0) {
       return (
         <div className="mx-auto max-w-sm">
@@ -167,7 +221,7 @@ export default function PatientBillingView() {
               onClick={() => router.push("/dashboard?view=billing")}
               className="mt-4 w-full"
             >
-              Back to Billing
+              Back to Browse & Purchase
             </Button>
           </Card>
         </div>
@@ -182,39 +236,8 @@ export default function PatientBillingView() {
         </div>
 
         <Card className="mb-6 border border-border bg-card p-6 shadow-lg md:p-8">
-          {paymentStatus === "success" ? (
-            <div className="py-12 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                <Check className="h-8 w-8 text-green-600" />
-              </div>
-              <h3 className="mb-2 text-2xl font-bold text-foreground">Payment Successful!</h3>
-              <p className="mb-6 text-muted-foreground">Redirecting to your assessments...</p>
-              <div className="flex justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              </div>
-            </div>
-          ) : paymentStatus === "failed" ? (
-            <div className="py-12 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-                <AlertCircle className="h-8 w-8 text-red-600" />
-              </div>
-              <h3 className="mb-2 text-2xl font-bold text-foreground">Payment Failed</h3>
-              <p className="mb-6 text-muted-foreground">
-                {!patientId ? "Patient ID not found in session. Please login again." : "Please try again or contact support"}
-              </p>
-              <Button
-                onClick={() => {
-                  setPaymentStatus("pending")
-                  setIsProcessing(false)
-                }}
-                className="w-full"
-              >
-                Try Again
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="mb-8 border-b border-input pb-8">
+          <>
+            <div className="mb-8 border-b border-input pb-8">
                 <h3 className="mb-4 font-semibold text-foreground">Order Summary</h3>
                 <div className="space-y-3">
                   {selectedTests.map((test) => (
@@ -260,21 +283,18 @@ export default function PatientBillingView() {
               <p className="mt-6 text-center text-xs text-muted-foreground">
                 Your payment information is secure and encrypted. This is a demo payment flow.
               </p>
-            </>
-          )}
+          </>
         </Card>
 
-        {paymentStatus === "pending" && (
-          <div className="text-center">
-            <Button
-              variant="ghost"
-              onClick={() => router.push("/dashboard?view=billing")}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Back to Billing
-            </Button>
-          </div>
-        )}
+        <div className="text-center">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/dashboard?view=billing")}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Back to Browse & Purchase
+          </Button>
+        </div>
       </div>
     )
   }

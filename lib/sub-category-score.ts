@@ -36,6 +36,28 @@ export function getScoreBarColorClass(level: ScoreLevel): string {
   }
 }
 
+export function getScoreBarColorHex(level: ScoreLevel): string {
+  switch (level) {
+    case "low":
+      return "#ef4444"
+    case "medium":
+      return "#f59e0b"
+    case "high":
+      return "#10b981"
+  }
+}
+
+export function getScoreTrackColorHex(level: ScoreLevel): string {
+  switch (level) {
+    case "low":
+      return "#fee2e2"
+    case "medium":
+      return "#fef3c7"
+    case "high":
+      return "#d1fae5"
+  }
+}
+
 export function getScoreBadgeColorClass(level: ScoreLevel): string {
   switch (level) {
     case "low":
