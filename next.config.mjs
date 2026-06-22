@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || "http://187.127.132.226:9000"
+const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || "https://api.psychometricevaluation.com/"
 
 const nextConfig = {
   typescript: {

@@ -5,7 +5,7 @@ import { apiClient } from "@/lib/api-client"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, Loader2, X, AlertCircle, Info } from "lucide-react"
+import { ChevronDown, Loader2, X, AlertCircle, FileText } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 interface Category {
@@ -252,17 +252,18 @@ export default function TestSelection({
                       className="w-4 h-4 rounded border-input text-primary cursor-pointer mt-1 shrink-0"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start gap-2 mb-1">
-                        <p className="font-semibold text-sm text-foreground">{test.evaluation_name}</p>
-                        <button
-                          onClick={() => setSelectedTestDetail(test)}
-                          className="text-primary hover:text-primary/80 transition-colors shrink-0"
-                          title="View test details"
-                        >
-                          <Info className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">{test.evaluation_fullname}</p>
+                      <p className="font-semibold text-sm text-foreground mb-1">{test.evaluation_name}</p>
+                      <p className="text-xs text-muted-foreground truncate mb-2">{test.evaluation_fullname}</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedTestDetail(test)}
+                        className="h-7 gap-1.5 border-primary/30 bg-primary/5 px-2.5 text-xs font-semibold text-primary hover:bg-primary/10 hover:text-primary"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        View Details
+                      </Button>
                     </div>
                     <div className="flex flex-col items-end shrink-0 text-sm">
                       <p className="font-bold text-primary">₹{test.evaluation_cost.toLocaleString()}</p>
