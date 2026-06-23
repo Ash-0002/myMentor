@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
-const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || "https://api.psychometricevaluation.com/"
+function normalizeBackendBaseUrl(url) {
+  return (url || "https://api.psychometricevaluation.com")
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/api$/i, "")
+}
+
+const BACKEND_BASE_URL = normalizeBackendBaseUrl(process.env.BACKEND_BASE_URL)
 
 const nextConfig = {
   typescript: {

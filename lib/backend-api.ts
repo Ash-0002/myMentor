@@ -1,6 +1,12 @@
-const DEFAULT_BACKEND_BASE_URL = "http://187.127.132.226:9000"
+const DEFAULT_BACKEND_BASE_URL = "https://api.psychometricevaluation.com"
 
-export const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL ?? DEFAULT_BACKEND_BASE_URL
+function normalizeBackendBaseUrl(url: string): string {
+  return url.trim().replace(/\/+$/, "").replace(/\/api$/i, "")
+}
+
+export const BACKEND_BASE_URL = normalizeBackendBaseUrl(
+  process.env.BACKEND_BASE_URL ?? DEFAULT_BACKEND_BASE_URL,
+)
 
 export const API_TENANT_ID = ""
 export const API_TENANT_NAME = ""
