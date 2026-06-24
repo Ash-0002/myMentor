@@ -1,9 +1,10 @@
 import React from "react"
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
 import {
-  formatDescriptorText,
   getPatientDisplayName,
+  getSubCategoryDescriptorDisplay,
   getSubCategoryInsightItems,
+  getSubCategoryMaxScore,
   type AssessmentReport,
 } from "@/lib/assessment-report"
 import {
@@ -12,7 +13,6 @@ import {
   getScoreLevelLabel,
   getScorePercent,
   getScoreTrackColorHex,
-  SUB_CATEGORY_MAX_SCORE,
 } from "@/lib/sub-category-score"
 
 interface AssessmentReportPdfProps {
@@ -123,15 +123,15 @@ const styles = StyleSheet.create({
   },
 })
 
-function PdfSubCategoryScoreBar({ score }: { score: number }) {
-  const percent = getScorePercent(score, SUB_CATEGORY_MAX_SCORE)
-  const level = getScoreLevel(score, SUB_CATEGORY_MAX_SCORE)
+function PdfSubCategoryScoreBar({ score, maxScore }: { score: number; maxScore: number }) {
+  const percent = getScorePercent(score, maxScore)
+  const level = getScoreLevel(score, maxScore)
 
   return (
     <View>
       <View style={styles.scoreBarMeta}>
         <Text style={styles.scoreBarMetaText}>
-          {score.toFixed(0)}/{SUB_CATEGORY_MAX_SCORE}
+          {score.toFixed(0)}/{maxScore}
         </Text>
         <Text style={styles.scoreBarMetaText}>
           {getScoreLevelLabel(level)} · {Math.round(percent)}%
@@ -224,20 +224,28 @@ export function AssessmentReportPdf({
         {insightRows.length > 0 ? <Text style={styles.sectionTitle}>Sub-category Insights</Text> : null}
         {insightRows.map((item, index) => {
           const score = Number(item.sub_category_score || 0)
-          const descriptorText = Array.from(
-            new Set(
-              (item.sub_category_descriptor ?? [])
-                .map((entry) => formatDescriptorText(entry.test_descriptor))
-                .filter(Boolean),
-            ),
-          ).join("\n\n")
+          const maxScore = getSubCategoryMaxScore(item)
+          const descriptors = getSubCategoryDescriptorDisplay(item.sub_category_descriptor)
           return (
             <View key={`${item.sub_category || "category"}-${index}`} style={styles.insightCard}>
               <Text style={styles.subTitle}>
-                {(item.sub_category || "Unnamed Category").trim()} ({score.toFixed(0)}/{SUB_CATEGORY_MAX_SCORE})
+                {(item.sub_category || "Unnamed Category").trim()} ({score.toFixed(0)}/{maxScore})
               </Text>
-              <PdfSubCategoryScoreBar score={score} />
-              {descriptorText ? <Text style={styles.textRow}>{descriptorText}</Text> : null}
+              <PdfSubCategoryScoreBar score={score} maxScore={maxScore} />
+              {descriptors.length > 0 ? (
+                <View style={{ marginTop: 4 }}>
+                  {descriptors.map((descriptor, descriptorIdx) => (
+                    <View key={`descriptor-${descriptorIdx}`} style={{ marginBottom: 6 }}>
+                      {descriptor.label ? (
+                        <Text style={[styles.textRow, { fontWeight: 700 }]}>{descriptor.label}</Text>
+                      ) : null}
+                      {descriptor.description ? (
+                        <Text style={styles.textRow}>{descriptor.description}</Text>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              ) : null}
               {item.sub_category_questions?.length ? (
                 <View style={{ marginTop: 4 }}>
                   {item.sub_category_questions.map((question, qIndex) => {

@@ -1,13 +1,16 @@
 import { isIndividualDashboardUser, normalizeDashboardUser } from "@/lib/dashboard-user"
+import { SUB_CATEGORY_MAX_SCORE } from "@/lib/sub-category-score"
 
 export interface AssessmentReportDescriptor {
   test_descriptor_id: number
   test_descriptor: string
+  sub_category_description?: string
 }
 
 export interface AssessmentReportChartData {
   sub_category: string
   sub_category_score: number
+  sub_category_total_score?: number
   sub_category_descriptor?: AssessmentReportDescriptor[]
 }
 
@@ -24,6 +27,7 @@ export interface AssessmentReportSelectedOption {
 export interface AssessmentReportSubCategoryResult {
   sub_category: string
   sub_category_score: number
+  sub_category_total_score?: number
   sub_category_questions?: AssessmentReportQuestion[]
   sub_category_descriptor?: AssessmentReportDescriptor[]
   sub_category_selected_option?: AssessmentReportSelectedOption[]
@@ -99,25 +103,40 @@ export function parseInterpretation(value: unknown): string {
 
 function parseDescriptors(value: unknown): AssessmentReportDescriptor[] {
   if (!Array.isArray(value)) return []
-  return value
-    .map((entry) => {
-      const row = asRecord(entry)
-      if (!row) return null
-      return {
-        test_descriptor_id: Number(row.test_descriptor_id ?? 0),
-        test_descriptor: String(row.test_descriptor ?? ""),
-      }
-    })
-    .filter((entry): entry is AssessmentReportDescriptor => Boolean(entry?.test_descriptor))
+
+  const descriptors: AssessmentReportDescriptor[] = []
+
+  for (const entry of value) {
+    const row = asRecord(entry)
+    if (!row) continue
+
+    const descriptor: AssessmentReportDescriptor = {
+      test_descriptor_id: Number(row.test_descriptor_id ?? 0),
+      test_descriptor: String(row.test_descriptor ?? ""),
+    }
+
+    if (typeof row.sub_category_description === "string" && row.sub_category_description.trim()) {
+      descriptor.sub_category_description = row.sub_category_description
+    }
+
+    if (descriptor.test_descriptor || descriptor.sub_category_description) {
+      descriptors.push(descriptor)
+    }
+  }
+
+  return descriptors
 }
 
 function parseChartData(value: unknown): AssessmentReportChartData[] {
   if (!Array.isArray(value)) return []
   return value.map((entry) => {
     const row = asRecord(entry) ?? {}
+    const totalScore = Number(row.sub_category_total_score ?? 0)
+
     return {
       sub_category: String(row.sub_category ?? ""),
       sub_category_score: Number(row.sub_category_score ?? 0),
+      sub_category_total_score: totalScore > 0 ? totalScore : undefined,
       sub_category_descriptor: parseDescriptors(row.sub_category_descriptor),
     }
   })
@@ -147,9 +166,12 @@ function parseSubCategoryResult(value: unknown): AssessmentReportSubCategoryResu
         })
       : []
 
+    const totalScore = Number(row.sub_category_total_score ?? 0)
+
     return {
       sub_category: String(row.sub_category ?? ""),
       sub_category_score: Number(row.sub_category_score ?? 0),
+      sub_category_total_score: totalScore > 0 ? totalScore : undefined,
       sub_category_questions: questions,
       sub_category_descriptor: parseDescriptors(row.sub_category_descriptor),
       sub_category_selected_option: selectedOptions,
@@ -223,6 +245,31 @@ export function formatDescriptorText(descriptor: string): string {
   return descriptor.replace(/\\n/g, "\n").trim()
 }
 
+export function getSubCategoryMaxScore(
+  item: Pick<AssessmentReportSubCategoryResult, "sub_category_total_score">,
+): number {
+  const totalScore = Number(item.sub_category_total_score ?? 0)
+  return Number.isFinite(totalScore) && totalScore > 0 ? totalScore : SUB_CATEGORY_MAX_SCORE
+}
+
+export interface SubCategoryDescriptorDisplay {
+  label: string
+  description: string
+}
+
+export function getSubCategoryDescriptorDisplay(
+  descriptors?: AssessmentReportDescriptor[],
+): SubCategoryDescriptorDisplay[] {
+  if (!descriptors?.length) return []
+
+  return descriptors
+    .map((descriptor) => ({
+      label: formatDescriptorText(descriptor.test_descriptor),
+      description: formatDescriptorText(descriptor.sub_category_description ?? ""),
+    }))
+    .filter((entry) => entry.label || entry.description)
+}
+
 export type SubCategoryInsightItem = AssessmentReportSubCategoryResult
 
 export function getSubCategoryInsightItems(report: AssessmentReport): SubCategoryInsightItem[] {
@@ -233,6 +280,7 @@ export function getSubCategoryInsightItems(report: AssessmentReport): SubCategor
   return (report.test_chart_data ?? []).map((item) => ({
     sub_category: item.sub_category,
     sub_category_score: item.sub_category_score,
+    sub_category_total_score: item.sub_category_total_score,
     sub_category_descriptor: item.sub_category_descriptor,
   }))
 }

@@ -4,11 +4,11 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import SubCategoryScoreBar from "@/components/results/SubCategoryScoreBar"
 import {
-  formatDescriptorText,
-  getSubCategoryInsightItems,
+  getSubCategoryDescriptorDisplay,
+  getSubCategoryMaxScore,
   type SubCategoryInsightItem,
 } from "@/lib/assessment-report"
-import { getScoreBadgeColorClass, getScoreLevel, getScoreLevelLabel, SUB_CATEGORY_MAX_SCORE } from "@/lib/sub-category-score"
+import { getScoreBadgeColorClass, getScoreLevel, getScoreLevelLabel } from "@/lib/sub-category-score"
 
 interface SubCategoryResultSectionProps {
   items: SubCategoryInsightItem[]
@@ -26,37 +26,39 @@ export default function SubCategoryResultSection({
       <h4 className="font-semibold text-foreground">{title}</h4>
       {items.map((item, idx) => {
         const score = Number(item.sub_category_score || 0)
-        const level = getScoreLevel(score)
-        const descriptors = Array.from(
-          new Set(
-            (item.sub_category_descriptor ?? [])
-              .map((descriptor) => formatDescriptorText(descriptor.test_descriptor))
-              .filter(Boolean),
-          ),
-        )
+        const maxScore = getSubCategoryMaxScore(item)
+        const level = getScoreLevel(score, maxScore)
+        const descriptors = getSubCategoryDescriptorDisplay(item.sub_category_descriptor)
 
         return (
           <Card key={`${item.sub_category}-${idx}`} className="space-y-4 border border-border p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <h5 className="font-semibold text-foreground">
-                {item.sub_category.trim()} ({score.toFixed(0)}/{SUB_CATEGORY_MAX_SCORE})
+                {item.sub_category.trim()} ({score.toFixed(0)}/{maxScore})
               </h5>
               <Badge variant="outline" className={`border ${getScoreBadgeColorClass(level)}`}>
                 {getScoreLevelLabel(level)}
               </Badge>
             </div>
 
-            <SubCategoryScoreBar score={score} />
+            <SubCategoryScoreBar score={score} maxScore={maxScore} showLevel={false} />
 
             {descriptors.length > 0 && (
-              <div className="space-y-2 border-t border-border pt-3">
-                {descriptors.map((text, descriptorIdx) => (
-                  <p
+              <div className="space-y-3 border-t border-border pt-3">
+                {descriptors.map((descriptor, descriptorIdx) => (
+                  <div
                     key={`${item.sub_category}-descriptor-${descriptorIdx}`}
-                    className="whitespace-pre-wrap text-sm text-muted-foreground"
+                    className="space-y-1 rounded-lg border border-border/60 bg-muted/20 p-3"
                   >
-                    {text}
-                  </p>
+                    {descriptor.label ? (
+                      <p className="text-sm font-semibold text-foreground">{descriptor.label}</p>
+                    ) : null}
+                    {descriptor.description ? (
+                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                        {descriptor.description}
+                      </p>
+                    ) : null}
+                  </div>
                 ))}
               </div>
             )}
